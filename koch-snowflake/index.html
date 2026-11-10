@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>앱 제목</title>
+<!--
+  ============================================================
+  새 앱 기본 틀
+  1) 이 폴더(app-template)를 복사해 영어 폴더 이름으로 바꿉니다. 예) probability
+  2) 아래 "앱 제목", 상단 문구, "도구 전용" 영역만 바꿉니다.
+  3) site-config.js의 TOOLS에 등록하면 홈페이지에 카드가 생깁니다.
+  ※ Claude에게 맡길 때는 '연수가이드/02_프롬프트모음.md'의 [프롬프트 B]를 쓰세요.
+  ============================================================
+-->
+<style>
+  /* ===== 내 수학 실험실 공통 테마 =====
+     이 :root 블록과 아래 "공통 셸" 영역은 모든 도구가 동일하게 유지합니다.
+     도구별 CSS는 파일 아래쪽 "도구 전용" 영역에만 추가하세요. */
+  :root{
+    --bg:#f2f0e9;
+    --panel:#fbf9f3;
+    --panel-2:#f4f1e9;
+    --line:#d8d2c7;
+    --border-soft:#eee9df;
+    --text:#15171a;
+    --muted:#6b6f74;
+    --faint:#9a958a;
+    --accent:#ff5a30;
+    --accent-weak:rgba(255,90,48,.14);
+    --lime:#d9f24f;
+    --shadow:0 10px 28px rgba(21,23,26,.055);
+    --radius:16px;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    background:
+      linear-gradient(rgba(21,23,26,.035) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(21,23,26,.035) 1px, transparent 1px),
+      var(--bg);
+    background-size:34px 34px;
+    color:var(--text);
+    font-family:Pretendard,"Apple SD Gothic Neo","Noto Sans KR",-apple-system,BlinkMacSystemFont,sans-serif;
+    letter-spacing:-.015em;
+    min-height:100vh;
+    -webkit-font-smoothing:antialiased;
+  }
+  button,input,select{font:inherit;color:inherit}
+  .num{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+
+  .app{width:100%;max-width:1180px;margin:0 auto;padding:12px;display:flex;flex-direction:column;gap:10px}
+
+  /* ---- 공통 셸: 상단바 ---- */
+  .topbar{
+    min-height:72px;
+    display:flex;
+    gap:14px;
+    justify-content:space-between;
+    align-items:center;
+    padding:10px 14px;
+    background:rgba(242,240,233,.90);
+    border:1px solid var(--line);
+    border-radius:18px;
+    backdrop-filter:blur(14px);
+  }
+  .brand-area{display:flex;align-items:center;gap:18px;min-width:0}
+  .home-link{
+    display:flex;align-items:center;gap:10px;flex:none;
+    color:var(--text);text-decoration:none;
+    padding:7px 10px 7px 8px;border-radius:12px;
+    transition:background .18s ease;
+  }
+  .home-link:hover{background:#e7e3d9}
+  .home-arrow{
+    width:31px;height:31px;border:1px solid #c9c4b8;border-radius:50%;
+    display:grid;place-items:center;font-size:16px;line-height:1;background:#fbf9f3;
+  }
+  .brand-copy{display:block;line-height:1.15}
+  .brand-copy strong{display:block;font-size:14px;font-weight:800;letter-spacing:-.035em}
+  .brand-copy small{
+    display:block;margin-top:4px;color:#8a8d90;
+    font-family:ui-monospace,SFMono-Regular,Consolas,monospace;
+    font-size:7.5px;letter-spacing:.13em;white-space:nowrap;
+  }
+  .top-divider{width:1px;height:34px;background:#d3cec3;flex:none}
+  .title-row{display:block;min-width:0}
+  .eyebrow{
+    display:flex;align-items:center;gap:7px;margin-bottom:4px;
+    color:#7b7770;font-size:10px;font-weight:750;white-space:nowrap;
+  }
+  .eyebrow span{display:block;width:18px;height:2px;background:var(--accent)}
+  h1{
+    font-size:clamp(18px,1.25vw,24px);
+    margin:0;
+    font-weight:800;letter-spacing:-.04em;white-space:nowrap;
+  }
+  h1 em{
+    font-style:normal;font-weight:500;
+    background:linear-gradient(transparent 60%,var(--lime) 0);
+    padding:0 .04em;
+  }
+  .subtitle{margin:4px 0 0;color:#666b6f;font-size:11.5px}
+  .badge{
+    display:inline-flex;align-items:center;gap:7px;flex:none;
+    background:#15171a;color:#fff;border:0;
+    border-radius:999px;padding:8px 12px;font-weight:700;font-size:12px;white-space:nowrap;
+  }
+  .dot{width:9px;height:9px;border-radius:50%;background:#73c48f}
+
+  /* ---- 공통 셸: 패널 ----
+     기본은 "넓은 그림 영역 + 좁은 설정 영역" 2단입니다.
+     패널 수가 다르면 grid-template-columns만 바꾸고, 좁은 화면에서 1단으로
+     떨어지는 @media (max-width:900px) 규칙은 남겨 두세요. */
+  .workspace{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(300px,1fr);gap:10px}
+  .panel{
+    min-width:0;
+    display:flex;flex-direction:column;
+    background:rgba(251,249,243,.96);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    box-shadow:var(--shadow);
+    overflow:hidden;
+  }
+  .panel-head{
+    flex:0 0 auto;
+    padding:12px 14px;
+    border-bottom:1px solid var(--line);
+    background:rgba(247,244,236,.92);
+  }
+  .panel-title{
+    font-size:15px;font-weight:800;letter-spacing:-.025em;
+    position:relative;padding-left:10px;
+  }
+  .panel-title::before{
+    content:"";position:absolute;left:0;top:.15em;bottom:.15em;
+    width:3px;border-radius:3px;background:var(--accent);
+  }
+  .panel-desc{color:#74716b;font-size:11.5px;margin-top:5px;line-height:1.45}
+  .panel-body{flex:1;min-height:0;padding:14px}
+
+  /* ---- 공통 셸: 버튼 ---- */
+  .btn{
+    border:1px solid #c9c4b8;background:#fbf9f3;color:#15171a;
+    border-radius:999px;font-weight:700;font-size:12.5px;
+    padding:9px 14px;cursor:pointer;line-height:1;
+    transition:background .15s ease,border-color .15s ease,transform .15s ease;
+  }
+  .btn:hover:not(:disabled){transform:translateY(-1px);border-color:#15171a;background:#f2efe6}
+  .btn:disabled{opacity:.4;cursor:not-allowed;transform:none}
+  .btn.primary{background:#15171a;color:#fff;border-color:#15171a}
+  .btn.primary:hover:not(:disabled){background:#2b2e31}
+  .btn.danger{color:#a73b2c}
+  .btn.icon-btn{width:38px;height:38px;padding:0;border-radius:10px;font-size:18px;display:grid;place-items:center}
+
+  /* ---- 공통 셸: 그림 영역 (캔버스·SVG) ---- */
+  .chart-wrap{background:#fff;border:1px solid #e3ded4;border-radius:12px;overflow:hidden;position:relative}
+  .chart-wrap canvas,.chart-wrap svg{display:block;width:100%;height:100%}
+
+  /* ---- 공통 셸: 입력·지표·안내 (쓰지 않는 것은 지우세요) ---- */
+  .controls{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+  .control{display:flex;flex-direction:column;gap:5px}
+  .control label{font-size:11px;color:var(--muted);font-weight:800}
+  .control input{
+    width:100%;padding:9px 10px;font-weight:700;
+    border:1px solid #d3cec3;background:#fff;color:var(--text);border-radius:10px;
+  }
+  .control input:focus{outline:3px solid rgba(217,242,79,.42);border-color:#9aa64b}
+  .control input[type="range"]{
+    padding:0;height:22px;border:0;border-radius:0;background:transparent;
+    accent-color:#15171a;cursor:pointer;
+  }
+  .checkbox-control{
+    justify-content:center;min-height:58px;padding:8px 10px;
+    border:1px solid var(--line);background:var(--panel-2);border-radius:12px;
+  }
+  .checkbox-control label{display:flex;align-items:center;gap:8px;color:var(--text);cursor:pointer;font-size:11px}
+  .checkbox-control input{width:17px;height:17px;padding:0;accent-color:#15171a;cursor:pointer}
+
+  .metrics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+  .metric{background:var(--panel-2);border:1px solid #ddd7cc;border-radius:11px;padding:8px 9px;min-width:0}
+  .metric .label{color:#77736d;font-size:10px;font-weight:800;margin-bottom:3px}
+  .metric .value{
+    font-size:15px;font-weight:850;color:var(--text);
+    font-variant-numeric:tabular-nums;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  }
+
+  .formula{
+    background:#15171a;color:#f6f2e9;border:1px solid #15171a;border-radius:12px;
+    padding:9px 10px;line-height:1.55;font-size:12px;
+    font-family:ui-monospace,SFMono-Regular,Consolas,monospace;overflow:auto;
+  }
+  .note{
+    padding:10px 12px;border-radius:10px;
+    background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;
+    font-size:11px;line-height:1.5;
+  }
+  .note b{color:#7c2d12;font-weight:800}
+  .status{min-height:19px;font-size:11px;line-height:1.4;font-weight:750;color:var(--muted)}
+  .status.ok{color:#32724f}
+  .status.error{color:#b44634}
+
+  .legend{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center}
+  .legend-item{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--muted)}
+  .legend-item i{width:11px;height:11px;border-radius:3px;flex:none}
+
+  /* ---- 공통 셸: 반응형 (이 3개 블록은 그대로 유지) ----
+     주의: .topbar에 align-items:stretch를 쓰면 알약 모양 .badge가
+     줄바꿈된 제목 높이만큼 세로로 늘어나 거대한 원처럼 깨집니다. */
+  @media (max-width:1080px){
+    .brand-copy small{display:none}
+    .brand-copy strong{font-size:13px}
+    .top-divider{height:28px}
+  }
+  @media (max-width:900px){
+    .workspace{grid-template-columns:1fr}
+  }
+  @media (max-width:820px){
+    .topbar{align-items:flex-start}
+    .brand-area{align-items:flex-start}
+    .home-link{padding-left:2px}
+    .top-divider{display:none}
+    .brand-copy{display:none}
+    .title-row{display:block}
+    h1{white-space:normal}
+    .eyebrow{white-space:normal}
+    .badge{display:none}
+  }
+  @media (max-width:520px){
+    .app{padding:7px}
+    .topbar{border-radius:14px;padding:9px 10px}
+    .home-arrow{width:34px;height:34px}
+    h1{font-size:20px;line-height:1.25}
+    .subtitle{font-size:11px;white-space:normal}
+    .panel{border-radius:14px}
+    .panel-head{padding:12px}
+    .btn{min-height:40px}
+    .controls{grid-template-columns:1fr}
+  }
+
+
+  /* ===== 도구 전용 CSS는 여기부터 ===== */
+  .stage{aspect-ratio:1/1;max-height:min(72vh,680px);margin:0 auto;width:100%}
+  .stage-tools{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:10px}
+  .level-badge{
+    position:absolute;left:10px;top:10px;padding:5px 9px;border-radius:999px;
+    background:rgba(21,23,26,.86);color:#fff;font-size:12px;font-weight:800;pointer-events:none
+  }
+  .seg{display:flex;border:1px solid #c9c4b8;border-radius:999px;overflow:hidden;background:#fbf9f3}
+  .seg button{border:0;background:transparent;padding:8px 12px;font-size:12px;font-weight:700;cursor:pointer}
+  .seg button.on{background:#15171a;color:#fff}
+  .range-row{display:flex;justify-content:space-between;align-items:baseline}
+  .range-row b{font-size:13px}
+  table.steps{width:100%;border-collapse:collapse;font-size:11.5px}
+  table.steps th,table.steps td{padding:5px 6px;border-bottom:1px solid var(--border-soft);text-align:right}
+  table.steps th{color:var(--muted);font-weight:800;background:var(--panel-2)}
+  table.steps th:first-child,table.steps td:first-child{text-align:center}
+  table.steps tr.cur td{background:var(--accent-weak);font-weight:800}
+  .table-wrap{max-height:230px;overflow:auto;border:1px solid var(--line);border-radius:10px;background:#fff}
+  .mini-chart{height:150px}
+  details.explain summary{cursor:pointer;font-weight:800;font-size:12.5px}
+  details.explain p{font-size:12px;line-height:1.65;color:#3d4044;margin:8px 0 0}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="topbar">
+    <div class="brand-area">
+      <!-- 홈으로 돌아가는 링크: ../#tools 를 바꾸지 마세요 -->
+      <a class="home-link" href="../#tools" aria-label="메인으로">
+        <span class="home-arrow">←</span>
+        <span class="brand-copy">
+          <strong data-site="name">내 수학 실험실</strong>
+          <small data-site="englishName">MATHEMATICS LABORATORY</small>
+        </span>
+      </a>
+      <span class="top-divider" aria-hidden="true"></span>
+      <div class="title-row">
+        <div class="eyebrow"><span></span>미적분Ⅰ · 등비급수 · 프랙탈</div>
+        <h1>코흐 <em>눈송이</em> 프랙탈</h1>
+        <p class="subtitle">둘레는 끝없이 길어지는데 넓이는 한 값에 다가가는 도형을 단계별로 관찰합니다.</p>
+      </div>
+    </div>
+    <div class="badge"><span class="dot"></span><span id="stateBadge">단계 0</span></div>
+  </div>
+
+  <div class="workspace">
+    <section class="panel">
+      <div class="panel-head">
+        <div class="panel-title">눈송이 그리기</div>
+        <div class="panel-desc">각 변을 3등분하고 가운데 부분 위에 정삼각형을 붙이는 과정을 반복합니다. 주황색은 이번 단계에 새로 붙은 삼각형입니다.</div>
+      </div>
+      <div class="panel-body">
+        <div class="chart-wrap stage">
+          <canvas id="cv"></canvas>
+          <div class="level-badge" id="levelBadge">n = 0</div>
+        </div>
+        <div class="stage-tools">
+          <button class="btn icon-btn" id="prevBtn" type="button" aria-label="이전 단계">−</button>
+          <button class="btn icon-btn" id="nextBtn" type="button" aria-label="다음 단계">+</button>
+          <button class="btn primary" id="playBtn" type="button">▶ 자동 재생</button>
+          <button class="btn" id="resetBtn" type="button">처음으로</button>
+          <div class="seg" role="group" aria-label="방향">
+            <button type="button" id="dirOut" class="on">바깥쪽 (눈송이)</button>
+            <button type="button" id="dirIn">안쪽 (반눈송이)</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head">
+        <div class="panel-title">설정과 측정</div>
+        <div class="panel-desc">처음 정삼각형의 한 변의 길이를 1로 둡니다.</div>
+      </div>
+      <div class="panel-body" style="display:flex;flex-direction:column;gap:12px">
+        <div class="control">
+          <div class="range-row"><label for="level">반복 단계 n</label><b class="num" id="levelVal">0</b></div>
+          <input id="level" type="range" min="0" max="7" step="1" value="0">
+        </div>
+        <div class="control">
+          <div class="range-row"><label for="zoom">확대 (위쪽 꼭짓점 중심)</label><b class="num" id="zoomVal">×1</b></div>
+          <input id="zoom" type="range" min="0" max="4" step="0.01" value="0">
+        </div>
+        <div class="controls">
+          <div class="checkbox-control"><label><input type="checkbox" id="showNew" checked>새로 붙은 삼각형 강조</label></div>
+          <div class="checkbox-control"><label><input type="checkbox" id="showBase">처음 정삼각형 보기</label></div>
+        </div>
+
+        <div class="metrics">
+          <div class="metric"><div class="label">변의 개수 3·4ⁿ</div><div class="value num" id="mSides">3</div></div>
+          <div class="metric"><div class="label">한 변의 길이 (1/3)ⁿ</div><div class="value num" id="mLen">1</div></div>
+          <div class="metric"><div class="label">둘레 3·(4/3)ⁿ</div><div class="value num" id="mPer">3</div></div>
+          <div class="metric"><div class="label">넓이 (처음 넓이 = 1)</div><div class="value num" id="mArea">1</div></div>
+        </div>
+
+        <div class="formula" id="formula"></div>
+
+        <div>
+          <div class="legend" style="margin-bottom:6px">
+            <span class="legend-item"><i style="background:#ff5a30"></i>둘레 (발산)</span>
+            <span class="legend-item"><i style="background:#2f6fd6"></i>넓이 (수렴 → 8/5)</span>
+            <span class="legend-item"><i style="background:#9a958a;height:2px"></i>넓이의 극한 1.6</span>
+          </div>
+          <div class="chart-wrap mini-chart"><canvas id="chart"></canvas></div>
+        </div>
+
+        <div class="table-wrap">
+          <table class="steps">
+            <thead><tr><th>n</th><th>변의 개수</th><th>둘레</th><th>넓이</th></tr></thead>
+            <tbody id="tbody"></tbody>
+          </table>
+        </div>
+
+        <details class="explain">
+          <summary>왜 넓이는 8/5에 다가갈까?</summary>
+          <p>n단계에서는 변이 3·4<sup>n−1</sup>개이고, 각 변마다 넓이가 (1/9)<sup>n</sup>인 정삼각형이 하나씩 붙습니다(처음 넓이를 1로 볼 때).
+          그래서 늘어나는 넓이는 3·4<sup>n−1</sup>·(1/9)<sup>n</sup> = (1/3)·(4/9)<sup>n−1</sup>입니다.</p>
+          <p>넓이 = 1 + (1/3)(1 + 4/9 + (4/9)² + …) = 1 + (1/3)·1/(1 − 4/9) = 1 + 3/5 = <b>8/5</b>.<br>
+          반면 둘레는 공비가 4/3 &gt; 1인 등비수열이라 한없이 커집니다.</p>
+        </details>
+
+        <div class="note"><b>관찰 질문</b> 확대 슬라이더를 ×3, ×9로 맞춰 보세요. 꼭짓점 근처의 모양이 전체의 한 부분과 똑같이 보이나요? 이런 성질을 <b>자기닮음</b>이라고 합니다.</div>
+      </div>
+    </section>
+  </div>
+</div>
+
+<!-- 홈페이지 이름을 site-config.js에서 가져와 상단에 표시합니다 -->
+<script src="../site-config.js"></script>
+<script>
+  if (typeof SITE !== "undefined") {
+    document.querySelectorAll("[data-site]").forEach(el => {
+      if (SITE[el.dataset.site]) el.textContent = SITE[el.dataset.site];
+    });
+  }
+</script>
+<script>
+  // ===== 도구 전용 JavaScript는 여기부터 =====
+  const MAX_LEVEL = 7;
+  const $ = id => document.getElementById(id);
+  const cv = $("cv"), ctx = cv.getContext("2d");
+  const chart = $("chart"), cctx = chart.getContext("2d");
+  const state = { level: 0, inward: false, zoomExp: 0, showNew: true, showBase: false, timer: null };
+
+  // 처음 정삼각형 (한 변 1, 꼭짓점이 위로, 시계방향)
+  const H = Math.sqrt(3) / 2;
+  const BASE = [[0, -H * 2 / 3], [0.5, H / 3], [-0.5, H / 3]];
+
+  // 꼭짓점 목록을 단계별로 미리 계산 (닫힌 다각형)
+  const cache = {};
+  function polygon(level, inward) {
+    const key = level + (inward ? "i" : "o");
+    if (cache[key]) return cache[key];
+    let pts = BASE.slice();
+    const sign = inward ? -1 : 1;
+    const triangles = [];       // 마지막 단계에 새로 생긴 삼각형
+    for (let k = 0; k < level; k++) {
+      const next = [];
+      const last = k === level - 1;
+      for (let i = 0; i < pts.length; i++) {
+        const a = pts[i], b = pts[(i + 1) % pts.length];
+        const dx = (b[0] - a[0]) / 3, dy = (b[1] - a[1]) / 3;
+        const p1 = [a[0] + dx, a[1] + dy];
+        const p3 = [a[0] + 2 * dx, a[1] + 2 * dy];
+        // 변 방향을 -60° 회전한 방향이 바깥쪽(시계방향 다각형, 화면 좌표)
+        const c = 0.5, s = -Math.sqrt(3) / 2 * sign;
+        const p2 = [p1[0] + dx * c - dy * s, p1[1] + dx * s + dy * c];
+        next.push(a, p1, p2, p3);
+        if (last) triangles.push([p1, p2, p3]);
+      }
+      pts = next;
+      cache[(k + 1) + (inward ? "i" : "o") + "t"] = triangles.slice();
+    }
+    cache[key] = pts;
+    return pts;
+  }
+  function newTriangles(level, inward) {
+    if (level === 0) return [];
+    polygon(level, inward);
+    return cache[level + (inward ? "i" : "o") + "t"] || [];
+  }
+
+  function fitCanvas(c) {
+    const r = c.getBoundingClientRect();
+    const dpr = window.devicePixelRatio || 1;
+    const w = Math.max(1, Math.round(r.width * dpr)), h = Math.max(1, Math.round(r.height * dpr));
+    if (c.width !== w || c.height !== h) { c.width = w; c.height = h; }
+    return { w, h, dpr };
+  }
+
+  function draw() {
+    const { w, h, dpr } = fitCanvas(cv);
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.clearRect(0, 0, w, h);
+    const zoom = Math.pow(3, state.zoomExp);
+    const scale = Math.min(w, h) * 0.78 * zoom;
+    // 확대 중심: 처음 정삼각형의 위쪽 꼭짓점 (도형 중심 → 꼭짓점으로 부드럽게 이동)
+    const t = Math.min(1, state.zoomExp);
+    const fx = BASE[0][0] * t, fy = BASE[0][1] * t;
+    const cx = w / 2, cy = h / 2 + Math.min(w, h) * (0.02 * (1 - t) - 0.32 * t);
+    const X = x => cx + (x - fx) * scale, Y = y => cy + (y - fy) * scale;
+
+    const pts = polygon(state.level, state.inward);
+    ctx.beginPath();
+    pts.forEach((p, i) => i ? ctx.lineTo(X(p[0]), Y(p[1])) : ctx.moveTo(X(p[0]), Y(p[1])));
+    ctx.closePath();
+    ctx.fillStyle = "rgba(47,111,214,.13)";
+    ctx.fill();
+
+    if (state.showNew) {
+      ctx.fillStyle = state.inward ? "rgba(255,255,255,1)" : "rgba(255,90,48,.55)";
+      const tris = newTriangles(state.level, state.inward);
+      ctx.beginPath();
+      for (const tr of tris) {
+        ctx.moveTo(X(tr[0][0]), Y(tr[0][1]));
+        ctx.lineTo(X(tr[1][0]), Y(tr[1][1]));
+        ctx.lineTo(X(tr[2][0]), Y(tr[2][1]));
+        ctx.closePath();
+      }
+      if (state.inward) { ctx.fill(); ctx.fillStyle = "rgba(255,90,48,.45)"; }
+      ctx.fill();
+    }
+
+    ctx.beginPath();
+    pts.forEach((p, i) => i ? ctx.lineTo(X(p[0]), Y(p[1])) : ctx.moveTo(X(p[0]), Y(p[1])));
+    ctx.closePath();
+    ctx.strokeStyle = "#15171a";
+    ctx.lineWidth = Math.max(1, (state.level >= 5 ? 1 : 1.6) * dpr);
+    ctx.lineJoin = "round";
+    ctx.stroke();
+
+    if (state.showBase) {
+      ctx.beginPath();
+      BASE.forEach((p, i) => i ? ctx.lineTo(X(p[0]), Y(p[1])) : ctx.moveTo(X(p[0]), Y(p[1])));
+      ctx.closePath();
+      ctx.setLineDash([6 * dpr, 5 * dpr]);
+      ctx.strokeStyle = "#2f6fd6";
+      ctx.lineWidth = 1.5 * dpr;
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+  }
+
+  // 값 계산 (처음 한 변 = 1, 처음 넓이 = 1)
+  const sides = n => 3 * Math.pow(4, n);
+  const perim = n => 3 * Math.pow(4 / 3, n);
+  const area = (n, inward) => inward ? (2 / 5 + 3 / 5 * Math.pow(4 / 9, n)) : (8 / 5 - 3 / 5 * Math.pow(4 / 9, n));
+  const fmt = (v, d = 4) => Number(v.toFixed(d)).toLocaleString("ko-KR", { maximumFractionDigits: d });
+
+  function frac(n) { return n === 0 ? "1" : "1/" + Math.pow(3, n).toLocaleString("ko-KR"); }
+
+  function updateInfo() {
+    const n = state.level, inw = state.inward;
+    $("levelVal").textContent = n;
+    $("levelBadge").textContent = "n = " + n;
+    $("stateBadge").textContent = "단계 " + n;
+    $("mSides").textContent = sides(n).toLocaleString("ko-KR");
+    $("mLen").textContent = frac(n);
+    $("mPer").textContent = fmt(perim(n));
+    $("mArea").textContent = fmt(area(n, inw));
+    const lim = inw ? "2/5 = 0.4" : "8/5 = 1.6";
+    const op = inw ? "−" : "+";
+    $("formula").innerHTML =
+      "둘레 P<sub>n</sub> = 3·(4/3)<sup>" + n + "</sup> ≈ " + fmt(perim(n)) + "  → ∞<br>" +
+      "넓이 A<sub>n</sub> = 1 " + op + " (1/3)·Σ(4/9)<sup>k</sup> ≈ " + fmt(area(n, inw)) + "  → " + lim;
+    let rows = "";
+    for (let k = 0; k <= MAX_LEVEL; k++) {
+      rows += `<tr class="${k === n ? "cur" : ""}"><td>${k}</td><td class="num">${sides(k).toLocaleString("ko-KR")}</td><td class="num">${fmt(perim(k))}</td><td class="num">${fmt(area(k, inw))}</td></tr>`;
+    }
+    $("tbody").innerHTML = rows;
+    document.querySelector(".legend-item:nth-child(2)").lastChild.textContent = inw ? "넓이 (수렴 → 2/5)" : "넓이 (수렴 → 8/5)";
+    document.querySelector(".legend-item:nth-child(3)").lastChild.textContent = "넓이의 극한 " + (inw ? "0.4" : "1.6");
+    $("prevBtn").disabled = n === 0;
+    $("nextBtn").disabled = n === MAX_LEVEL;
+  }
+
+  function drawChart() {
+    const { w, h, dpr } = fitCanvas(chart);
+    const c = cctx;
+    c.setTransform(1, 0, 0, 1, 0, 0);
+    c.clearRect(0, 0, w, h);
+    const padL = 30 * dpr, padR = 10 * dpr, padT = 10 * dpr, padB = 20 * dpr;
+    const maxY = Math.ceil(perim(MAX_LEVEL));
+    const X = k => padL + (w - padL - padR) * k / MAX_LEVEL;
+    const Y = v => h - padB - (h - padT - padB) * v / maxY;
+    c.font = `${10 * dpr}px ui-monospace,Consolas,monospace`;
+    c.fillStyle = "#8a8d90"; c.strokeStyle = "#eee9df"; c.lineWidth = dpr;
+    c.textAlign = "right"; c.textBaseline = "middle";
+    for (let v = 0; v <= maxY; v += 5) {
+      c.beginPath(); c.moveTo(padL, Y(v)); c.lineTo(w - padR, Y(v)); c.stroke();
+      c.fillText(v, padL - 5 * dpr, Y(v));
+    }
+    c.textAlign = "center"; c.textBaseline = "top";
+    for (let k = 0; k <= MAX_LEVEL; k++) c.fillText(k, X(k), h - padB + 5 * dpr);
+    // 넓이 극한선
+    const lim = state.inward ? 0.4 : 1.6;
+    c.setLineDash([4 * dpr, 4 * dpr]); c.strokeStyle = "#9a958a";
+    c.beginPath(); c.moveTo(padL, Y(lim)); c.lineTo(w - padR, Y(lim)); c.stroke(); c.setLineDash([]);
+    const series = [[k => perim(k), "#ff5a30"], [k => area(k, state.inward), "#2f6fd6"]];
+    for (const [f, col] of series) {
+      c.strokeStyle = col; c.lineWidth = 2 * dpr; c.beginPath();
+      for (let k = 0; k <= MAX_LEVEL; k++) k ? c.lineTo(X(k), Y(f(k))) : c.moveTo(X(k), Y(f(k)));
+      c.stroke();
+      for (let k = 0; k <= MAX_LEVEL; k++) {
+        c.fillStyle = col; c.beginPath();
+        c.arc(X(k), Y(f(k)), (k === state.level ? 4.5 : 2.5) * dpr, 0, Math.PI * 2); c.fill();
+      }
+    }
+  }
+
+  function render() { updateInfo(); draw(); drawChart(); }
+
+  function setLevel(n) {
+    state.level = Math.max(0, Math.min(MAX_LEVEL, n));
+    $("level").value = state.level;
+    render();
+  }
+
+  function stopPlay() {
+    clearInterval(state.timer); state.timer = null;
+    $("playBtn").textContent = "▶ 자동 재생";
+  }
+
+  $("level").addEventListener("input", e => { stopPlay(); setLevel(+e.target.value); });
+  $("prevBtn").addEventListener("click", () => { stopPlay(); setLevel(state.level - 1); });
+  $("nextBtn").addEventListener("click", () => { stopPlay(); setLevel(state.level + 1); });
+  $("resetBtn").addEventListener("click", () => {
+    stopPlay(); state.zoomExp = 0; $("zoom").value = 0; $("zoomVal").textContent = "×1"; setLevel(0);
+  });
+  $("playBtn").addEventListener("click", () => {
+    if (state.timer) return stopPlay();
+    if (state.level === MAX_LEVEL) setLevel(0);
+    $("playBtn").textContent = "❚❚ 멈춤";
+    state.timer = setInterval(() => {
+      if (state.level >= MAX_LEVEL) return stopPlay();
+      setLevel(state.level + 1);
+    }, 1100);
+  });
+  $("zoom").addEventListener("input", e => {
+    state.zoomExp = +e.target.value;
+    const z = Math.pow(3, state.zoomExp);
+    $("zoomVal").textContent = "×" + (z < 10 ? z.toFixed(1) : Math.round(z));
+    draw();
+  });
+  $("showNew").addEventListener("change", e => { state.showNew = e.target.checked; draw(); });
+  $("showBase").addEventListener("change", e => { state.showBase = e.target.checked; draw(); });
+  function setDir(inward) {
+    state.inward = inward;
+    $("dirOut").classList.toggle("on", !inward);
+    $("dirIn").classList.toggle("on", inward);
+    render();
+  }
+  $("dirOut").addEventListener("click", () => setDir(false));
+  $("dirIn").addEventListener("click", () => setDir(true));
+  window.addEventListener("keydown", e => {
+    if (e.target.tagName === "INPUT" && e.target.type !== "checkbox") return;
+    if (e.key === "ArrowRight") { stopPlay(); setLevel(state.level + 1); }
+    if (e.key === "ArrowLeft") { stopPlay(); setLevel(state.level - 1); }
+  });
+  new ResizeObserver(() => { draw(); drawChart(); }).observe(document.querySelector(".stage"));
+  render();
+</script>
+</body>
+</html>
