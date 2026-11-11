@@ -1,0 +1,877 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>내분점으로 만드는 글꼴</title>
+<!--
+  ============================================================
+  새 앱 기본 틀
+  1) 이 폴더(app-template)를 복사해 영어 폴더 이름으로 바꿉니다. 예) probability
+  2) 아래 "앱 제목", 상단 문구, "도구 전용" 영역만 바꿉니다.
+  3) site-config.js의 TOOLS에 등록하면 홈페이지에 카드가 생깁니다.
+  ※ Claude에게 맡길 때는 '연수가이드/02_프롬프트모음.md'의 [프롬프트 B]를 쓰세요.
+  ============================================================
+-->
+<style>
+  /* ===== 내 수학 실험실 공통 테마 =====
+     이 :root 블록과 아래 "공통 셸" 영역은 모든 도구가 동일하게 유지합니다.
+     도구별 CSS는 파일 아래쪽 "도구 전용" 영역에만 추가하세요. */
+  :root{
+    --bg:#f2f0e9;
+    --panel:#fbf9f3;
+    --panel-2:#f4f1e9;
+    --line:#d8d2c7;
+    --border-soft:#eee9df;
+    --text:#15171a;
+    --muted:#6b6f74;
+    --faint:#9a958a;
+    --accent:#ff5a30;
+    --accent-weak:rgba(255,90,48,.14);
+    --lime:#d9f24f;
+    --shadow:0 10px 28px rgba(21,23,26,.055);
+    --radius:16px;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    background:
+      linear-gradient(rgba(21,23,26,.035) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(21,23,26,.035) 1px, transparent 1px),
+      var(--bg);
+    background-size:34px 34px;
+    color:var(--text);
+    font-family:Pretendard,"Apple SD Gothic Neo","Noto Sans KR",-apple-system,BlinkMacSystemFont,sans-serif;
+    letter-spacing:-.015em;
+    min-height:100vh;
+    -webkit-font-smoothing:antialiased;
+  }
+  button,input,select{font:inherit;color:inherit}
+  .num{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+
+  .app{width:100%;max-width:1180px;margin:0 auto;padding:12px;display:flex;flex-direction:column;gap:10px}
+
+  /* ---- 공통 셸: 상단바 ---- */
+  .topbar{
+    min-height:72px;
+    display:flex;
+    gap:14px;
+    justify-content:space-between;
+    align-items:center;
+    padding:10px 14px;
+    background:rgba(242,240,233,.90);
+    border:1px solid var(--line);
+    border-radius:18px;
+    backdrop-filter:blur(14px);
+  }
+  .brand-area{display:flex;align-items:center;gap:18px;min-width:0}
+  .home-link{
+    display:flex;align-items:center;gap:10px;flex:none;
+    color:var(--text);text-decoration:none;
+    padding:7px 10px 7px 8px;border-radius:12px;
+    transition:background .18s ease;
+  }
+  .home-link:hover{background:#e7e3d9}
+  .home-arrow{
+    width:31px;height:31px;border:1px solid #c9c4b8;border-radius:50%;
+    display:grid;place-items:center;font-size:16px;line-height:1;background:#fbf9f3;
+  }
+  .brand-copy{display:block;line-height:1.15}
+  .brand-copy strong{display:block;font-size:14px;font-weight:800;letter-spacing:-.035em}
+  .brand-copy small{
+    display:block;margin-top:4px;color:#8a8d90;
+    font-family:ui-monospace,SFMono-Regular,Consolas,monospace;
+    font-size:7.5px;letter-spacing:.13em;white-space:nowrap;
+  }
+  .top-divider{width:1px;height:34px;background:#d3cec3;flex:none}
+  .title-row{display:block;min-width:0}
+  .eyebrow{
+    display:flex;align-items:center;gap:7px;margin-bottom:4px;
+    color:#7b7770;font-size:10px;font-weight:750;white-space:nowrap;
+  }
+  .eyebrow span{display:block;width:18px;height:2px;background:var(--accent)}
+  h1{
+    font-size:clamp(18px,1.25vw,24px);
+    margin:0;
+    font-weight:800;letter-spacing:-.04em;white-space:nowrap;
+  }
+  h1 em{
+    font-style:normal;font-weight:500;
+    background:linear-gradient(transparent 60%,var(--lime) 0);
+    padding:0 .04em;
+  }
+  .subtitle{margin:4px 0 0;color:#666b6f;font-size:11.5px}
+  .badge{
+    display:inline-flex;align-items:center;gap:7px;flex:none;
+    background:#15171a;color:#fff;border:0;
+    border-radius:999px;padding:8px 12px;font-weight:700;font-size:12px;white-space:nowrap;
+  }
+  .dot{width:9px;height:9px;border-radius:50%;background:#73c48f}
+
+  /* ---- 공통 셸: 패널 ----
+     기본은 "넓은 그림 영역 + 좁은 설정 영역" 2단입니다.
+     패널 수가 다르면 grid-template-columns만 바꾸고, 좁은 화면에서 1단으로
+     떨어지는 @media (max-width:900px) 규칙은 남겨 두세요. */
+  .workspace{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(300px,1fr);gap:10px}
+  .panel{
+    min-width:0;
+    display:flex;flex-direction:column;
+    background:rgba(251,249,243,.96);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    box-shadow:var(--shadow);
+    overflow:hidden;
+  }
+  .panel-head{
+    flex:0 0 auto;
+    padding:12px 14px;
+    border-bottom:1px solid var(--line);
+    background:rgba(247,244,236,.92);
+  }
+  .panel-title{
+    font-size:15px;font-weight:800;letter-spacing:-.025em;
+    position:relative;padding-left:10px;
+  }
+  .panel-title::before{
+    content:"";position:absolute;left:0;top:.15em;bottom:.15em;
+    width:3px;border-radius:3px;background:var(--accent);
+  }
+  .panel-desc{color:#74716b;font-size:11.5px;margin-top:5px;line-height:1.45}
+  .panel-body{flex:1;min-height:0;padding:14px}
+
+  /* ---- 공통 셸: 버튼 ---- */
+  .btn{
+    border:1px solid #c9c4b8;background:#fbf9f3;color:#15171a;
+    border-radius:999px;font-weight:700;font-size:12.5px;
+    padding:9px 14px;cursor:pointer;line-height:1;
+    transition:background .15s ease,border-color .15s ease,transform .15s ease;
+  }
+  .btn:hover:not(:disabled){transform:translateY(-1px);border-color:#15171a;background:#f2efe6}
+  .btn:disabled{opacity:.4;cursor:not-allowed;transform:none}
+  .btn.primary{background:#15171a;color:#fff;border-color:#15171a}
+  .btn.primary:hover:not(:disabled){background:#2b2e31}
+  .btn.danger{color:#a73b2c}
+  .btn.icon-btn{width:38px;height:38px;padding:0;border-radius:10px;font-size:18px;display:grid;place-items:center}
+
+  /* ---- 공통 셸: 그림 영역 (캔버스·SVG) ---- */
+  .chart-wrap{background:#fff;border:1px solid #e3ded4;border-radius:12px;overflow:hidden;position:relative}
+  .chart-wrap canvas,.chart-wrap svg{display:block;width:100%;height:100%}
+
+  /* ---- 공통 셸: 입력·지표·안내 (쓰지 않는 것은 지우세요) ---- */
+  .controls{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+  .control{display:flex;flex-direction:column;gap:5px}
+  .control label{font-size:11px;color:var(--muted);font-weight:800}
+  .control input{
+    width:100%;padding:9px 10px;font-weight:700;
+    border:1px solid #d3cec3;background:#fff;color:var(--text);border-radius:10px;
+  }
+  .control input:focus{outline:3px solid rgba(217,242,79,.42);border-color:#9aa64b}
+  .control input[type="range"]{
+    padding:0;height:22px;border:0;border-radius:0;background:transparent;
+    accent-color:#15171a;cursor:pointer;
+  }
+  .checkbox-control{
+    justify-content:center;min-height:58px;padding:8px 10px;
+    border:1px solid var(--line);background:var(--panel-2);border-radius:12px;
+  }
+  .checkbox-control label{display:flex;align-items:center;gap:8px;color:var(--text);cursor:pointer;font-size:11px}
+  .checkbox-control input{width:17px;height:17px;padding:0;accent-color:#15171a;cursor:pointer}
+
+  .metrics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+  .metric{background:var(--panel-2);border:1px solid #ddd7cc;border-radius:11px;padding:8px 9px;min-width:0}
+  .metric .label{color:#77736d;font-size:10px;font-weight:800;margin-bottom:3px}
+  .metric .value{
+    font-size:15px;font-weight:850;color:var(--text);
+    font-variant-numeric:tabular-nums;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  }
+
+  .formula{
+    background:#15171a;color:#f6f2e9;border:1px solid #15171a;border-radius:12px;
+    padding:9px 10px;line-height:1.55;font-size:12px;
+    font-family:ui-monospace,SFMono-Regular,Consolas,monospace;overflow:auto;
+  }
+  .note{
+    padding:10px 12px;border-radius:10px;
+    background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;
+    font-size:11px;line-height:1.5;
+  }
+  .note b{color:#7c2d12;font-weight:800}
+  .status{min-height:19px;font-size:11px;line-height:1.4;font-weight:750;color:var(--muted)}
+  .status.ok{color:#32724f}
+  .status.error{color:#b44634}
+
+  .legend{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center}
+  .legend-item{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--muted)}
+  .legend-item i{width:11px;height:11px;border-radius:3px;flex:none}
+
+  /* ---- 공통 셸: 반응형 (이 3개 블록은 그대로 유지) ----
+     주의: .topbar에 align-items:stretch를 쓰면 알약 모양 .badge가
+     줄바꿈된 제목 높이만큼 세로로 늘어나 거대한 원처럼 깨집니다. */
+  @media (max-width:1080px){
+    .brand-copy small{display:none}
+    .brand-copy strong{font-size:13px}
+    .top-divider{height:28px}
+  }
+  @media (max-width:900px){
+    .workspace{grid-template-columns:1fr}
+  }
+  @media (max-width:820px){
+    .topbar{align-items:flex-start}
+    .brand-area{align-items:flex-start}
+    .home-link{padding-left:2px}
+    .top-divider{display:none}
+    .brand-copy{display:none}
+    .title-row{display:block}
+    h1{white-space:normal}
+    .eyebrow{white-space:normal}
+    .badge{display:none}
+  }
+  @media (max-width:520px){
+    .app{padding:7px}
+    .topbar{border-radius:14px;padding:9px 10px}
+    .home-arrow{width:34px;height:34px}
+    h1{font-size:20px;line-height:1.25}
+    .subtitle{font-size:11px;white-space:normal}
+    .panel{border-radius:14px}
+    .panel-head{padding:12px}
+    .btn{min-height:40px}
+    .controls{grid-template-columns:1fr}
+  }
+
+
+  /* ===== 도구 전용 CSS는 여기부터 ===== */
+  @media (min-width:901px){ .workspace{grid-template-columns:minmax(0,1.35fr) minmax(320px,1fr)} }
+  .stage{aspect-ratio:1/1;width:100%;max-width:600px;margin:0 auto;touch-action:none;cursor:crosshair}
+  .stage.dragging{cursor:grabbing}
+  .stage-badge{
+    position:absolute;left:10px;top:10px;padding:5px 9px;border-radius:999px;
+    background:rgba(21,23,26,.86);color:#fff;font-size:12px;font-weight:800;pointer-events:none
+  }
+  .toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:10px}
+  .seg{display:flex;border:1px solid #c9c4b8;border-radius:999px;overflow:hidden;background:#fbf9f3}
+  .seg button{border:0;background:transparent;padding:8px 12px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap}
+  .seg button.on{background:#15171a;color:#fff}
+  .seg button:disabled{opacity:.35;cursor:not-allowed}
+  .chips{display:flex;flex-wrap:wrap;gap:6px}
+  .chip{
+    min-width:38px;height:38px;padding:0 10px;border-radius:10px;cursor:pointer;
+    border:1px solid #c9c4b8;background:#fff;font-weight:800;font-size:16px;
+  }
+  .chip.on{background:#15171a;color:#fff;border-color:#15171a}
+  .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .row input[type="text"]{
+    width:64px;padding:9px 10px;font-weight:800;text-align:center;
+    border:1px solid #d3cec3;background:#fff;border-radius:10px;
+  }
+  .range-row{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+  .range-row b{font-size:13px}
+  .section-label{font-size:11px;color:var(--muted);font-weight:800;margin-bottom:6px}
+  .calc{max-height:260px}
+  .calc .lv0{color:#c9c4b8}
+  .calc .lv1{color:#7fb0ff}
+  .calc .lv2{color:#7fd6a6}
+  .calc .lv3{color:#ff8a66}
+  .preview-wrap{margin-top:12px}
+  .preview{height:150px}
+  .preview-input{
+    flex:1;min-width:140px;padding:9px 10px;font-weight:800;
+    border:1px solid #d3cec3;background:#fff;border-radius:10px;
+  }
+  details.explain summary{cursor:pointer;font-weight:800;font-size:12.5px}
+  details.explain p{font-size:12px;line-height:1.7;color:#3d4044;margin:8px 0 0}
+  @media (max-width:520px){ .preview{height:120px} .seg button{padding:8px 10px} }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="topbar">
+    <div class="brand-area">
+      <!-- 홈으로 돌아가는 링크: ../#tools 를 바꾸지 마세요 -->
+      <a class="home-link" href="../#tools" aria-label="메인으로">
+        <span class="home-arrow">←</span>
+        <span class="brand-copy">
+          <strong data-site="name">내 수학 실험실</strong>
+          <small data-site="englishName">MATHEMATICS LABORATORY</small>
+        </span>
+      </a>
+      <span class="top-divider" aria-hidden="true"></span>
+      <div class="title-row">
+        <div class="eyebrow"><span></span>공통수학2 · 선분의 내분점 · 베지에 곡선</div>
+        <h1>내분점으로 만드는 <em>글꼴</em></h1>
+        <p class="subtitle">선분을 t : (1−t)로 내분하는 일을 되풀이하면 곡선이 생깁니다. 이 곡선으로 나만의 글자를 디자인합니다.</p>
+      </div>
+    </div>
+    <div class="badge"><span class="dot"></span><span id="stateBadge">글자 B</span></div>
+  </div>
+
+  <div class="workspace">
+    <section class="panel">
+      <div class="panel-head">
+        <div class="panel-title">글자 편집기</div>
+        <div class="panel-desc">점을 끌어서 획의 모양을 바꿉니다. 획을 누르면 선택되고, 선택한 획에서 내분점이 곡선을 만드는 과정이 보입니다.</div>
+      </div>
+      <div class="panel-body">
+        <div class="chart-wrap stage" id="stage">
+          <canvas id="cv"></canvas>
+          <div class="stage-badge" id="stageBadge">B</div>
+        </div>
+        <div class="toolbar">
+          <button class="btn primary" id="addBtn" type="button">+ 획 추가</button>
+          <button class="btn danger" id="delBtn" type="button">선택한 획 삭제</button>
+          <div class="seg" role="group" aria-label="획의 차수">
+            <button type="button" data-deg="1">직선</button>
+            <button type="button" data-deg="2">2차 곡선</button>
+            <button type="button" data-deg="3">3차 곡선</button>
+          </div>
+        </div>
+
+        <div class="preview-wrap">
+          <div class="section-label">내 글꼴 미리보기 (만든 글자로 문장을 씁니다)</div>
+          <div class="row" style="margin-bottom:8px">
+            <input class="preview-input" id="previewText" type="text" value="ABCD" maxlength="24" aria-label="미리보기 문장">
+            <button class="btn" id="svgBtn" type="button">SVG로 저장</button>
+          </div>
+          <div class="chart-wrap preview"><canvas id="pv"></canvas></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head">
+        <div class="panel-title">설정과 계산</div>
+        <div class="panel-desc">글자 칸은 가로·세로 0~100입니다. 아랫줄(기준선)은 y = 10, 윗줄은 y = 90입니다.</div>
+      </div>
+      <div class="panel-body" style="display:flex;flex-direction:column;gap:12px">
+        <div>
+          <div class="section-label">편집할 글자</div>
+          <div class="chips" id="chips"></div>
+          <div class="row" style="margin-top:8px">
+            <input type="text" id="newChar" maxlength="2" placeholder="글자" aria-label="새 글자">
+            <button class="btn" id="newBtn" type="button">새 글자 만들기</button>
+            <button class="btn" id="resetBtn" type="button">기본 글자로 되돌리기</button>
+          </div>
+        </div>
+
+        <div class="control">
+          <div class="range-row"><label for="tRange">내분 비율 t (선분을 t : 1−t 로 내분)</label><b class="num" id="tVal">0.40</b></div>
+          <div class="row">
+            <input id="tRange" type="range" min="0" max="1" step="0.01" value="0.4" style="flex:1">
+            <button class="btn" id="playBtn" type="button">▶ 움직이기</button>
+          </div>
+        </div>
+        <div class="control">
+          <div class="range-row"><label for="nRange">곡선을 그릴 내분점 개수</label><b class="num" id="nVal">25개</b></div>
+          <input id="nRange" type="range" min="1" max="40" step="1" value="24">
+        </div>
+        <div class="controls">
+          <div class="control">
+            <div class="range-row"><label for="wRange">획 굵기</label><b class="num" id="wVal">9</b></div>
+            <input id="wRange" type="range" min="2" max="20" step="1" value="9">
+          </div>
+          <div class="control">
+            <div class="range-row"><label for="sRange">기울임 (미리보기)</label><b class="num" id="sVal">0°</b></div>
+            <input id="sRange" type="range" min="-20" max="25" step="1" value="0">
+          </div>
+          <div class="checkbox-control"><label><input type="checkbox" id="showCon" checked>내분 과정 보기</label></div>
+          <div class="checkbox-control"><label><input type="checkbox" id="showPts">곡선을 이루는 점 보기</label></div>
+          <div class="checkbox-control"><label><input type="checkbox" id="snap" checked>정수 좌표에 맞추기</label></div>
+        </div>
+
+        <div class="metrics">
+          <div class="metric"><div class="label">이 글자의 획 수</div><div class="value num" id="mStrokes">—</div></div>
+          <div class="metric"><div class="label">선택한 획</div><div class="value" id="mDeg">—</div></div>
+        </div>
+
+        <div class="formula calc" id="calc"></div>
+
+        <details class="explain">
+          <summary>내분점을 되풀이하면 왜 곡선이 될까?</summary>
+          <p>두 점 A(x₁, y₁), B(x₂, y₂)를 m : n으로 내분하는 점은 ( (mx₂+nx₁)/(m+n), (my₂+ny₁)/(m+n) )입니다.
+          t = m/(m+n)으로 두면 이 점은 <b>(1−t)A + tB</b>로 쓸 수 있습니다.</p>
+          <p>세 점 P₀, P₁, P₂가 있을 때 P₀P₁, P₁P₂를 각각 t : (1−t)로 내분해 Q₀, Q₁을 얻고, 다시 Q₀Q₁을 같은 비로 내분하면
+          B(t) = (1−t)²P₀ + 2t(1−t)P₁ + t²P₂ 입니다. t를 0에서 1까지 바꾸면 이 점이 그리는 자취가 <b>2차 베지에 곡선</b>입니다.
+          점이 4개이면 같은 일을 한 번 더 하여 3차 곡선이 됩니다.</p>
+          <p>컴퓨터 글꼴은 글자 모양을 이 조절점들만으로 저장합니다(트루타입은 2차, 오픈타입·PDF는 주로 3차 곡선).
+          그래서 글자를 아무리 키워도 깨지지 않습니다.</p>
+        </details>
+
+        <div class="note"><b>관찰 질문</b> ① 내분점 개수를 1개, 2개, 4개로 줄여 보세요. 곡선이 어떻게 보이나요?
+        ② 직선 획을 3차 곡선으로 바꾸면 가운데 두 조절점은 선분을 몇 : 몇으로 내분한 자리에 생기나요?</div>
+      </div>
+    </section>
+  </div>
+</div>
+
+<!-- 홈페이지 이름을 site-config.js에서 가져와 상단에 표시합니다 -->
+<script src="../site-config.js"></script>
+<script>
+  if (typeof SITE !== "undefined") {
+    document.querySelectorAll("[data-site]").forEach(el => {
+      if (SITE[el.dataset.site]) el.textContent = SITE[el.dataset.site];
+    });
+  }
+</script>
+<script>
+  // ===== 도구 전용 JavaScript는 여기부터 =====
+  // 글자 칸 좌표: x, y 모두 0~100 (y는 위쪽이 +), 기준선 y=10, 윗줄 y=90
+  // 획 하나 = 점 배열. 점 2개 = 직선, 3개 = 2차 곡선, 4개 = 3차 곡선
+  const PRESETS = {
+    A: [[[20,10],[50,90]], [[50,90],[80,10]], [[32,38],[68,38]]],
+    B: [[[25,10],[25,90]], [[25,90],[74,92],[74,50],[25,50]], [[25,50],[84,52],[84,8],[25,10]]],
+    C: [[[78,76],[62,98],[18,94],[18,50]], [[18,50],[18,6],[62,2],[78,24]]],
+    D: [[[25,10],[25,90]], [[25,90],[92,90],[92,10],[25,10]]],
+    O: [[[50,90],[30,90],[18,72],[18,50]], [[18,50],[18,28],[30,10],[50,10]],
+        [[50,10],[70,10],[82,28],[82,50]], [[82,50],[82,72],[70,90],[50,90]]],
+    P: [[[25,10],[25,90]], [[25,90],[82,92],[82,46],[25,48]]],
+    S: [[[76,80],[62,96],[20,92],[22,68]], [[22,68],[24,46],[78,56],[78,32]], [[78,32],[78,6],[30,4],[20,24]]],
+    U: [[[22,90],[22,40]], [[22,40],[22,2],[78,2],[78,40]], [[78,40],[78,90]]],
+    "2": [[[22,70],[26,96],[78,96],[76,66]], [[76,66],[74,42],[30,28],[22,10]], [[22,10],[80,10]]],
+    "ㅇ": [[[50,80],[24,80],[24,20],[50,20]], [[50,20],[76,20],[76,80],[50,80]]]
+  };
+  const VIEW = 110, OFF = 5;                 // 화면에 -5 ~ 105 범위를 보여 줌
+  const LV_COLORS = ["#9a958a", "#2f6fd6", "#2fa36b", "#ff5a30"];
+  const NAMES = ["P", "Q", "R", "S"];
+  const SUB = "₀₁₂₃";
+  const KEY = "division-font-v1";
+  const $ = id => document.getElementById(id);
+  const cv = $("cv"), ctx = cv.getContext("2d");
+  const pv = $("pv"), pctx = pv.getContext("2d");
+
+  const state = {
+    glyphs: {}, order: [], cur: "B", sel: 1,
+    t: 0.4, N: 24, weight: 9, slant: 0,
+    showCon: true, showPts: false, snap: true,
+    playing: false, drag: null
+  };
+
+  // ---------- 수학: 내분점 ----------
+  // 선분 AB를 t : (1−t)로 내분하는 점 = (1−t)A + tB
+  const divide = (a, b, t) => [(1 - t) * a[0] + t * b[0], (1 - t) * a[1] + t * b[1]];
+  // 내분을 되풀이한 모든 단계 (드 카스텔조 알고리즘)
+  function levels(pts, t) {
+    const L = [pts];
+    while (L[L.length - 1].length > 1) {
+      const p = L[L.length - 1], next = [];
+      for (let i = 0; i < p.length - 1; i++) next.push(divide(p[i], p[i + 1], t));
+      L.push(next);
+    }
+    return L;
+  }
+  const pointAt = (pts, t) => { const L = levels(pts, t); return L[L.length - 1][0]; };
+  function sample(pts, N, tMax = 1) {
+    if (pts.length === 2) return [pts[0], pointAt(pts, tMax)];
+    const out = [];
+    const steps = Math.max(1, Math.ceil(N * tMax));
+    for (let i = 0; i <= steps; i++) out.push(pointAt(pts, Math.min(tMax, i / N)));
+    return out;
+  }
+  // 차수 바꾸기 (모두 내분점으로 계산)
+  function changeDegree(s, deg) {
+    const P0 = s[0], P3 = s[s.length - 1];
+    const cur = s.length - 1;
+    if (cur === deg) return s;
+    if (deg === 1) return [P0, P3];
+    if (deg === 2) {
+      if (cur === 1) return [P0, divide(P0, P3, 0.5), P3];
+      // 3차 → 2차: 가운데 두 점의 정보를 모아 근사
+      const m = [(3 * (s[1][0] + s[2][0]) - P0[0] - P3[0]) / 4, (3 * (s[1][1] + s[2][1]) - P0[1] - P3[1]) / 4];
+      return [P0, m, P3];
+    }
+    if (cur === 1) return [P0, divide(P0, P3, 1 / 3), divide(P0, P3, 2 / 3), P3];
+    // 2차 → 3차: 모양이 그대로인 차수 올리기 (P₀P₁을 2:1, P₂P₁을 2:1로 내분)
+    return [P0, divide(P0, s[1], 2 / 3), divide(P3, s[1], 2 / 3), P3];
+  }
+
+  // ---------- 저장 ----------
+  const clone = o => JSON.parse(JSON.stringify(o));
+  function resetGlyphs() {
+    state.glyphs = clone(PRESETS);
+    state.order = ["A", "B", "C", "D", "O", "P", "S", "U", "2", "ㅇ"];
+  }
+  function load() {
+    try {
+      const s = JSON.parse(localStorage.getItem(KEY));
+      if (s && s.glyphs && Array.isArray(s.order) && s.order.length) {
+        state.glyphs = s.glyphs; state.order = s.order;
+        if (typeof s.text === "string") $("previewText").value = s.text;
+        if (s.cur && s.glyphs[s.cur]) state.cur = s.cur;
+        return;
+      }
+    } catch (e) {}
+    resetGlyphs();
+  }
+  function save() {
+    try {
+      localStorage.setItem(KEY, JSON.stringify({ glyphs: state.glyphs, order: state.order, text: $("previewText").value, cur: state.cur }));
+    } catch (e) {}
+  }
+  const strokes = () => state.glyphs[state.cur] || [];
+  const selStroke = () => strokes()[state.sel] || null;
+
+  // ---------- 그리기 공통 ----------
+  function fitCanvas(c) {
+    const r = c.getBoundingClientRect();
+    const dpr = window.devicePixelRatio || 1;
+    const w = Math.max(1, Math.round(r.width * dpr)), h = Math.max(1, Math.round(r.height * dpr));
+    if (c.width !== w || c.height !== h) { c.width = w; c.height = h; }
+    return { w, h, dpr, cssW: r.width, cssH: r.height };
+  }
+  function polyline(c, pts, X, Y) {
+    c.beginPath();
+    pts.forEach((p, i) => i ? c.lineTo(X(p[0]), Y(p[1])) : c.moveTo(X(p[0]), Y(p[1])));
+  }
+  function dot(c, x, y, r, fill, stroke, lw) {
+    c.beginPath(); c.arc(x, y, r, 0, Math.PI * 2);
+    if (fill) { c.fillStyle = fill; c.fill(); }
+    if (stroke) { c.strokeStyle = stroke; c.lineWidth = lw; c.stroke(); }
+  }
+
+  // ---------- 편집기 ----------
+  function editorMap() {
+    const { w, dpr } = fitCanvas(cv);
+    const k = w / VIEW;
+    return { k, dpr, w, X: x => (x + OFF) * k, Y: y => (VIEW - OFF - y) * k };
+  }
+  function drawEditor() {
+    const { k, dpr, w, X, Y } = editorMap();
+    const c = ctx;
+    c.setTransform(1, 0, 0, 1, 0, 0);
+    c.clearRect(0, 0, w, w);
+
+    // 격자
+    c.lineWidth = dpr;
+    for (let g = 0; g <= 100; g += 10) {
+      c.strokeStyle = g % 50 === 0 ? "#ddd6ca" : "#efebe2";
+      c.beginPath(); c.moveTo(X(g), Y(0)); c.lineTo(X(g), Y(100)); c.stroke();
+      c.beginPath(); c.moveTo(X(0), Y(g)); c.lineTo(X(100), Y(g)); c.stroke();
+    }
+    c.font = `${9 * dpr}px ui-monospace,Consolas,monospace`;
+    c.fillStyle = "#b2ada2";
+    c.textAlign = "left"; c.textBaseline = "top";
+    for (let g = 0; g <= 100; g += 50) c.fillText(g, X(g) + 2 * dpr, Y(0) + 2 * dpr);
+    // 기준선, 윗줄
+    c.setLineDash([5 * dpr, 4 * dpr]);
+    c.strokeStyle = "rgba(255,90,48,.45)";
+    [10, 90].forEach(y => { c.beginPath(); c.moveTo(X(0), Y(y)); c.lineTo(X(100), Y(y)); c.stroke(); });
+    c.setLineDash([]);
+    c.fillStyle = "rgba(255,90,48,.7)"; c.textAlign = "right"; c.textBaseline = "bottom";
+    c.fillText("기준선 y=10", X(100), Y(10) - 2 * dpr);
+    c.fillText("윗줄 y=90", X(100), Y(90) - 2 * dpr);
+
+    const S = strokes();
+    if (!S.length) {
+      c.fillStyle = "#9a958a"; c.textAlign = "center"; c.textBaseline = "middle";
+      c.font = `${14 * dpr}px sans-serif`;
+      c.fillText("‘+ 획 추가’를 눌러 첫 획을 그려 보세요", w / 2, w / 2);
+    }
+
+    // 굵은 획 (곡선은 내분점들을 이은 꺾은선)
+    c.lineCap = "round"; c.lineJoin = "round";
+    S.forEach((s, i) => {
+      polyline(c, sample(s, state.N), X, Y);
+      c.strokeStyle = i === state.sel ? "rgba(47,111,214,.42)" : "rgba(21,23,26,.86)";
+      c.lineWidth = state.weight * k;
+      c.stroke();
+    });
+    if (state.showPts) {
+      S.forEach(s => sample(s, state.N).forEach(p => dot(c, X(p[0]), Y(p[1]), 2.6 * dpr, "#ff5a30")));
+    }
+
+    // 조절점과 조절 다각형
+    S.forEach((s, i) => {
+      const on = i === state.sel;
+      if (s.length > 2) {
+        polyline(c, s, X, Y);
+        c.setLineDash([4 * dpr, 4 * dpr]);
+        c.strokeStyle = on ? "#6b6f74" : "rgba(154,149,138,.6)";
+        c.lineWidth = dpr; c.stroke(); c.setLineDash([]);
+      }
+      s.forEach((p, j) => {
+        const end = j === 0 || j === s.length - 1;
+        const r = (on ? 6 : 4) * dpr;
+        if (end) dot(c, X(p[0]), Y(p[1]), r, on ? "#15171a" : "#6b6f74", "#fff", 1.5 * dpr);
+        else dot(c, X(p[0]), Y(p[1]), r, "#fff", on ? "#15171a" : "#9a958a", 2 * dpr);
+      });
+      if (on) {
+        c.font = `700 ${11 * dpr}px ui-monospace,Consolas,monospace`;
+        c.textAlign = "left"; c.textBaseline = "bottom"; c.fillStyle = "#15171a";
+        s.forEach((p, j) => c.fillText("P" + SUB[j], X(p[0]) + 7 * dpr, Y(p[1]) - 5 * dpr));
+      }
+    });
+
+    // 선택한 획의 내분 과정
+    const s = selStroke();
+    if (state.showCon && s) {
+      const L = levels(s, state.t);
+      // 지금까지 그려진 자취
+      polyline(c, sample(s, 80, state.t), X, Y);
+      c.strokeStyle = "#ff5a30"; c.lineWidth = 3.5 * dpr; c.stroke();
+      for (let lv = 1; lv < L.length; lv++) {
+        const pts = L[lv], last = lv === L.length - 1;
+        const col = last ? LV_COLORS[3] : LV_COLORS[lv];
+        if (pts.length > 1) { polyline(c, pts, X, Y); c.strokeStyle = col; c.lineWidth = 2 * dpr; c.stroke(); }
+        pts.forEach(p => dot(c, X(p[0]), Y(p[1]), (last ? 7 : 4.5) * dpr, col, "#fff", 2 * dpr));
+      }
+      const B = L[L.length - 1][0];
+      c.font = `800 ${12 * dpr}px ui-monospace,Consolas,monospace`;
+      c.textAlign = "left"; c.textBaseline = "top";
+      const label = `t=${state.t.toFixed(2)}`;
+      const tx = X(B[0]) + 9 * dpr, ty = Y(B[1]) + 6 * dpr;
+      c.lineWidth = 4 * dpr; c.strokeStyle = "rgba(255,255,255,.9)"; c.strokeText(label, tx, ty);
+      c.fillStyle = "#c2401f"; c.fillText(label, tx, ty);
+    }
+  }
+
+  // ---------- 미리보기 ----------
+  function layout(text) {
+    const items = [];
+    let x = 0;
+    const pad = state.weight / 2 + 7;
+    for (const ch of text) {
+      if (ch === " ") { x += 45; continue; }
+      const g = state.glyphs[ch] || state.glyphs[ch.toUpperCase()];
+      if (!g || !g.length) { items.push({ missing: true, x: x + 5, ch }); x += 70; continue; }
+      let a = Infinity, b = -Infinity;
+      g.forEach(s => s.forEach(p => { a = Math.min(a, p[0]); b = Math.max(b, p[0]); }));
+      items.push({ g, dx: x + pad - a });
+      x += (b - a) + 2 * pad;
+    }
+    const tan = Math.tan(state.slant * Math.PI / 180);
+    return { items, width: Math.max(x + Math.max(0, tan * 90) - Math.min(0, tan * 10), 1), tan };
+  }
+  // 기울임: x' = x + (y − 10)·tan θ  (점만 옮겨도 곡선 전체가 함께 기울어짐)
+  const slantPt = (p, dx, tan) => [p[0] + dx + (p[1] - 10) * tan, p[1]];
+
+  function drawPreview() {
+    const { w, h, dpr } = fitCanvas(pv);
+    const c = pctx;
+    c.setTransform(1, 0, 0, 1, 0, 0);
+    c.clearRect(0, 0, w, h);
+    const text = $("previewText").value;
+    const { items, width, tan } = layout(text);
+    const sc = Math.min((h - 16 * dpr) / 100, (w - 24 * dpr) / width);
+    const x0 = (w - width * sc) / 2 + Math.max(0, -tan * 10) * sc;
+    const X = x => x0 + x * sc, Y = y => h / 2 + (50 - y) * sc;
+    c.strokeStyle = "rgba(255,90,48,.25)"; c.lineWidth = dpr;
+    c.beginPath(); c.moveTo(0, Y(10)); c.lineTo(w, Y(10)); c.stroke();
+    if (!text.trim()) {
+      c.fillStyle = "#9a958a"; c.textAlign = "center"; c.textBaseline = "middle";
+      c.font = `${13 * dpr}px sans-serif`; c.fillText("위 칸에 글자를 입력하세요", w / 2, h / 2);
+      return;
+    }
+    c.lineCap = "round"; c.lineJoin = "round";
+    c.strokeStyle = "#15171a"; c.lineWidth = state.weight * sc;
+    for (const it of items) {
+      if (it.missing) {
+        c.save(); c.setLineDash([4 * dpr, 4 * dpr]); c.lineWidth = dpr; c.strokeStyle = "#b2ada2";
+        c.strokeRect(X(it.x), Y(90), 60 * sc, 80 * sc); c.restore();
+        c.fillStyle = "#9a958a"; c.textAlign = "center"; c.textBaseline = "middle";
+        c.font = `${Math.max(10, 24 * sc)}px sans-serif`; c.fillText(it.ch, X(it.x + 30), Y(50));
+        continue;
+      }
+      it.g.forEach(s => {
+        polyline(c, sample(s.map(p => slantPt(p, it.dx, tan)), state.N), X, Y);
+        c.stroke();
+      });
+    }
+  }
+
+  function exportSVG() {
+    const text = $("previewText").value;
+    const { items, width, tan } = layout(text);
+    const f = v => +v.toFixed(2);
+    const T = (p, dx) => { const q = slantPt(p, dx, tan); return `${f(q[0] + 10 + Math.max(0, -tan * 10))} ${f(110 - q[1])}`; };
+    const paths = [];
+    items.forEach(it => {
+      if (it.missing) return;
+      it.g.forEach(s => {
+        const cmd = s.length === 2 ? "L" : s.length === 3 ? "Q" : "C";
+        paths.push(`<path d="M ${T(s[0], it.dx)} ${cmd} ${s.slice(1).map(p => T(p, it.dx)).join(" ")}"/>`);
+      });
+    });
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${f(width + 20)} 120">\n` +
+      `<g fill="none" stroke="#15171a" stroke-width="${state.weight}" stroke-linecap="round" stroke-linejoin="round">\n` +
+      paths.join("\n") + `\n</g>\n</svg>\n`;
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([svg], { type: "image/svg+xml" }));
+    a.download = "my-font.svg";
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  }
+
+  // ---------- 계산 상자 ----------
+  const fmt = v => (Math.round(v * 10) / 10).toString();
+  const pt = p => `(${fmt(p[0])}, ${fmt(p[1])})`;
+  function updateCalc() {
+    const s = selStroke();
+    const box = $("calc");
+    if (!s) { box.innerHTML = "획을 하나 누르면 내분점 계산이 여기에 나타납니다."; return; }
+    const t = state.t;
+    const L = levels(s, t);
+    let html = `t = ${t.toFixed(2)} → 각 선분을 <b>${t.toFixed(2)} : ${(1 - t).toFixed(2)}</b>로 내분<br>`;
+    html += `<span class="lv0">조절점 ${s.map((p, j) => "P" + SUB[j] + pt(p)).join(" ")}</span><br>`;
+    for (let lv = 1; lv < L.length; lv++) {
+      const last = lv === L.length - 1;
+      const cls = last ? "lv3" : "lv" + lv;
+      L[lv].forEach((p, i) => {
+        const a = NAMES[lv - 1] + SUB[i], b = NAMES[lv - 1] + SUB[i + 1];
+        const name = last ? "B(t)" : NAMES[lv] + SUB[i];
+        html += `<span class="${cls}">${name} = ${a}${b}의 내분점 = ${pt(p)}</span><br>`;
+      });
+    }
+    if (s.length > 2) html += `<span style="color:#9a958a">→ B(t)가 곡선 위의 점입니다.</span>`;
+    else html += `<span style="color:#9a958a">→ 직선은 내분점 하나로 끝납니다.</span>`;
+    box.innerHTML = html;
+  }
+
+  // ---------- 화면 갱신 ----------
+  function renderChips() {
+    const box = $("chips");
+    box.innerHTML = "";
+    state.order.forEach(ch => {
+      const b = document.createElement("button");
+      b.type = "button"; b.className = "chip" + (ch === state.cur ? " on" : "");
+      b.textContent = ch;
+      b.addEventListener("click", () => { state.cur = ch; state.sel = 0; renderAll(); });
+      box.appendChild(b);
+    });
+  }
+  function updateInfo() {
+    const S = strokes(), s = selStroke();
+    $("stageBadge").textContent = state.cur;
+    $("stateBadge").textContent = "글자 " + state.cur;
+    $("mStrokes").textContent = S.length + "개";
+    $("mDeg").textContent = s ? ["", "직선", "2차 곡선", "3차 곡선"][s.length - 1] + ` (점 ${s.length}개)` : "없음";
+    document.querySelectorAll("[data-deg]").forEach(b => {
+      b.disabled = !s;
+      b.classList.toggle("on", !!s && +b.dataset.deg === s.length - 1);
+    });
+    $("delBtn").disabled = !s;
+  }
+  function redraw() { drawEditor(); drawPreview(); updateCalc(); updateInfo(); }
+  function renderAll() { renderChips(); redraw(); save(); }
+
+  // ---------- 마우스·터치로 점 끌기 ----------
+  function toGlyph(e) {
+    const r = cv.getBoundingClientRect();
+    return [(e.clientX - r.left) / r.width * VIEW - OFF, VIEW - OFF - (e.clientY - r.top) / r.height * VIEW];
+  }
+  function segDist(p, a, b) {
+    const dx = b[0] - a[0], dy = b[1] - a[1];
+    const L2 = dx * dx + dy * dy || 1;
+    const u = Math.max(0, Math.min(1, ((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / L2));
+    return Math.hypot(p[0] - a[0] - u * dx, p[1] - a[1] - u * dy);
+  }
+  cv.addEventListener("pointerdown", e => {
+    const g = toGlyph(e);
+    const unit = VIEW / cv.getBoundingClientRect().width;   // 화면 1px = 글자 칸 몇 단위
+    const S = strokes();
+    const near = 14 * unit;
+    // 선택한 획의 점을 먼저, 그다음 다른 획의 점
+    const orderIdx = [state.sel, ...S.map((_, i) => i).filter(i => i !== state.sel)].filter(i => S[i]);
+    for (const i of orderIdx) {
+      for (let j = 0; j < S[i].length; j++) {
+        if (Math.hypot(S[i][j][0] - g[0], S[i][j][1] - g[1]) < near) {
+          state.sel = i; state.drag = { i, j };
+          cv.setPointerCapture(e.pointerId); $("stage").classList.add("dragging");
+          redraw(); return;
+        }
+      }
+    }
+    // 획 몸통을 눌렀는지
+    let best = -1, bd = Math.max(near, state.weight / 2 + 4 * unit);
+    S.forEach((s, i) => {
+      const pts = sample(s, 40);
+      for (let k = 0; k < pts.length - 1; k++) {
+        const d = segDist(g, pts[k], pts[k + 1]);
+        if (d < bd) { bd = d; best = i; }
+      }
+    });
+    state.sel = best;
+    redraw();
+  });
+  cv.addEventListener("pointermove", e => {
+    if (!state.drag) return;
+    let [x, y] = toGlyph(e);
+    x = Math.max(-5, Math.min(105, x)); y = Math.max(-5, Math.min(105, y));
+    if (state.snap) { x = Math.round(x); y = Math.round(y); }
+    else { x = Math.round(x * 10) / 10; y = Math.round(y * 10) / 10; }
+    strokes()[state.drag.i][state.drag.j] = [x, y];
+    redraw();
+  });
+  const endDrag = () => {
+    if (!state.drag) return;
+    state.drag = null; $("stage").classList.remove("dragging"); save();
+  };
+  cv.addEventListener("pointerup", endDrag);
+  cv.addEventListener("pointercancel", endDrag);
+
+  // ---------- 버튼·슬라이더 ----------
+  $("addBtn").addEventListener("click", () => {
+    const S = state.glyphs[state.cur] || (state.glyphs[state.cur] = []);
+    const shift = (S.length % 4) * 4;
+    S.push([[30 + shift, 30 + shift], [38 + shift, 72 + shift], [62 + shift, 72 + shift], [70 + shift, 30 + shift]]);
+    state.sel = S.length - 1;
+    renderAll();
+  });
+  $("delBtn").addEventListener("click", () => {
+    const S = strokes();
+    if (!S[state.sel]) return;
+    S.splice(state.sel, 1);
+    state.sel = Math.min(state.sel, S.length - 1);
+    renderAll();
+  });
+  document.querySelectorAll("[data-deg]").forEach(b => b.addEventListener("click", () => {
+    const S = strokes();
+    if (!S[state.sel]) return;
+    S[state.sel] = changeDegree(S[state.sel], +b.dataset.deg);
+    renderAll();
+  }));
+  $("newBtn").addEventListener("click", () => {
+    const ch = [...$("newChar").value.trim()][0];
+    if (!ch) { $("newChar").focus(); return; }
+    if (!state.glyphs[ch]) { state.glyphs[ch] = []; state.order.push(ch); }
+    state.cur = ch; state.sel = -1; $("newChar").value = "";
+    renderAll();
+  });
+  $("newChar").addEventListener("keydown", e => { if (e.key === "Enter") $("newBtn").click(); });
+  $("resetBtn").addEventListener("click", () => {
+    if (!confirm("직접 만든 글자와 고친 내용이 모두 지워지고 기본 글자로 돌아갑니다. 계속할까요?")) return;
+    resetGlyphs(); state.cur = "B"; state.sel = 1;
+    renderAll();
+  });
+  $("tRange").addEventListener("input", e => { state.t = +e.target.value; $("tVal").textContent = state.t.toFixed(2); drawEditor(); updateCalc(); });
+  $("nRange").addEventListener("input", e => {
+    state.N = +e.target.value; $("nVal").textContent = (state.N + 1) + "개"; drawEditor(); drawPreview();
+  });
+  $("wRange").addEventListener("input", e => { state.weight = +e.target.value; $("wVal").textContent = state.weight; drawEditor(); drawPreview(); });
+  $("sRange").addEventListener("input", e => { state.slant = +e.target.value; $("sVal").textContent = state.slant + "°"; drawPreview(); });
+  $("showCon").addEventListener("change", e => { state.showCon = e.target.checked; drawEditor(); });
+  $("showPts").addEventListener("change", e => { state.showPts = e.target.checked; drawEditor(); });
+  $("snap").addEventListener("change", e => { state.snap = e.target.checked; });
+  $("previewText").addEventListener("input", () => { drawPreview(); save(); });
+  $("svgBtn").addEventListener("click", exportSVG);
+
+  let lastTs = 0;
+  function tick(ts) {
+    if (!state.playing) return;
+    if (lastTs) state.t += (ts - lastTs) / 2500;
+    lastTs = ts;
+    if (state.t > 1) state.t = 0;
+    $("tRange").value = state.t; $("tVal").textContent = state.t.toFixed(2);
+    drawEditor(); updateCalc();
+    requestAnimationFrame(tick);
+  }
+  $("playBtn").addEventListener("click", () => {
+    state.playing = !state.playing;
+    $("playBtn").textContent = state.playing ? "❚❚ 멈춤" : "▶ 움직이기";
+    if (state.playing) { lastTs = 0; requestAnimationFrame(tick); }
+  });
+
+  new ResizeObserver(() => { drawEditor(); drawPreview(); }).observe(document.querySelector(".app"));
+  load();
+  renderAll();
+</script>
+</body>
+</html>
