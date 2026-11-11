@@ -6,5 +6,3 @@
 - 새 앱 빈 틀: `app-template/index.html`
 - 예시 앱: `linear-function/` (일차함수 그래프 탐구)
 - Claude 작업 지침: `CLAUDE.md`
-
-원본 디자인: [중기쌤의 수학 실험실](https://joongki-j.github.io/math-lab/)
