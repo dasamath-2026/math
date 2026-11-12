@@ -280,7 +280,32 @@
     position:absolute;left:8px;bottom:8px;font-size:10.5px;color:#6b6f74;background:rgba(255,255,255,.88);
     border:1px solid #e3ded4;border-radius:8px;padding:4px 7px;pointer-events:none;
   }
+  /* 대구학습법 학습 기능 배지 */
+  .dl-row{display:flex;flex-direction:column;align-items:flex-end;gap:6px;margin-bottom:8px}
+  .dl-badges{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:6px;max-width:100%}
+  .dl-badge{
+    --c:#ff5a30;--bg:rgba(255,90,48,.10);
+    border:1px solid var(--c);background:var(--bg);color:var(--c);
+    border-radius:999px;padding:5px 10px;font-size:11.5px;font-weight:800;cursor:pointer;line-height:1.3;
+    text-align:left;max-width:100%;white-space:normal;
+  }
+  .dl-badge .dl-k{opacity:.75;font-weight:700}
+  .dl-badge[aria-expanded="true"]{background:var(--c);color:#fff}
+  .dl-badge[data-f="정보처리"]{--c:#2f6fd6;--bg:rgba(47,111,214,.10)}
+  .dl-badge[data-f="사고"]{--c:#7a4fd1;--bg:rgba(122,79,209,.10)}
+  .dl-badge[data-f="자기관리"]{--c:#2fa36b;--bg:rgba(47,163,107,.10)}
+  .dl-badge[data-f="공동체"]{--c:#c98a00;--bg:rgba(201,138,0,.12)}
+  .dl-desc{
+    display:none;max-width:560px;font-size:11.5px;line-height:1.5;color:#3d4044;
+    background:#fff;border:1px solid var(--line);border-left:3px solid var(--c,#ff5a30);border-radius:8px;padding:7px 10px;
+  }
+  .dl-desc.show{display:block}
+  .dl-foot{font-size:11.5px;line-height:1.55;color:var(--muted);text-align:center;padding:6px 10px 14px;margin:0}
+  .dl-foot a{color:var(--text);font-weight:800}
   @media (max-width:520px){
+    .dl-row{align-items:stretch}
+    .dl-badges{justify-content:flex-start}
+    .dl-desc{max-width:none}
     .stage{height:360px}
     .tab{padding:8px 10px;font-size:12px}
   }
@@ -564,6 +589,7 @@
       </section>
     </div>
   </section>
+  <p class="dl-foot">배지는 이 활동에서 기르는 대구학습법 학습 기능입니다. 수학에서는 그래프·그림을 식으로, 식을 그래프로 바꾸는 것도 의사소통 기능입니다. · <a href="../daegu-learning/">대구학습법 알아보기 →</a></p>
 </div>
 
 <!-- 홈페이지 이름을 site-config.js에서 가져와 상단에 표시합니다 -->
@@ -1369,6 +1395,45 @@
   makeDraggable($("cv5"),
     (x, y) => ({ x, y, yaw: t5.yaw, pitch: t5.pitch }),
     (s, x, y) => { t5.yaw = s.yaw + (x - s.x) * 0.4; t5.pitch = Math.max(-89, Math.min(89, s.pitch + (y - s.y) * 0.4)); draw5(); });
+
+  // ---------- 대구학습법 학습 기능 배지 (탭마다 오른쪽 위) ----------
+  const DL_BADGES = [
+    [["정보처리", "정보 활용", "측정한 전파 도달 시간을 거리 데이터로 바꾸고 오차표로 정리한다."],
+     ["의사소통", "논리적 표현", "시간–거리 관계를 식 d = c×Δt와 표로 나타낸다."]],
+    [["의사소통", "논리적 표현", "원 그림을 원의 방정식으로, 두 식을 뺀 결과를 직선 그래프로 바꾸어 나타낸다."],
+     ["사고", "비판적 사고", "시계 오차로 세 원이 한 점에서 만나지 않는 까닭을 근거로 검증한다."]],
+    [["사고", "전이와 융합", "배운 코사인 법칙을 위치 계산이라는 새 맥락에 적용한다."],
+     ["의사소통", "논리적 표현", "삼각형 그림을 코사인 법칙 식과 좌표 (r cosθ, r sinθ)로 바꾸어 표현한다."]],
+    [["사고", "창의적 사고", "평면의 코사인 법칙을 둥근 지구의 구면삼각형으로 확장한다."],
+     ["의사소통", "논리적 표현", "지구본 위 구면삼각형 그림을 위도·경도 식으로 바꾸어 거리를 나타낸다."]],
+    [["자기관리", "성찰", "반복할 때마다 오차를 되돌아보고 추정값을 고쳐 나간다."],
+     ["정보처리", "매체 활용", "반복 결과를 표와 3D 그림으로 구조화해 수렴을 확인한다."]]
+  ];
+  document.querySelectorAll(".pane").forEach(pane => {
+    const list = DL_BADGES[+pane.dataset.pane]; if (!list) return;
+    const row = document.createElement("div"); row.className = "dl-row";
+    const wrap = document.createElement("div"); wrap.className = "dl-badges";
+    const desc = document.createElement("div"); desc.className = "dl-desc";
+    list.forEach(([f, sub, why]) => {
+      const b = document.createElement("button");
+      b.type = "button"; b.className = "dl-badge"; b.dataset.f = f; b.title = why;
+      b.setAttribute("aria-expanded", "false");
+      b.innerHTML = `<span class="dl-k">대구학습법 · </span>${f} &gt; ${sub}`;
+      b.addEventListener("click", () => {
+        const open = b.getAttribute("aria-expanded") !== "true";
+        wrap.querySelectorAll(".dl-badge").forEach(x => x.setAttribute("aria-expanded", "false"));
+        if (open) {
+          b.setAttribute("aria-expanded", "true");
+          desc.style.setProperty("--c", getComputedStyle(b).getPropertyValue("--c"));
+          desc.innerHTML = `<b>${f} &gt; ${sub}</b> — ${why}`;
+        }
+        desc.classList.toggle("show", open);
+      });
+      wrap.appendChild(b);
+    });
+    row.append(wrap, desc);
+    pane.prepend(row);
+  });
 
   // ---------- 시작 ----------
   update1();
