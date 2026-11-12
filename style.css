@@ -17,13 +17,22 @@
   --cream:#faf5ec;
 }
 
+/* 홈페이지 글꼴: 학교안심 보드마카 (KERIS, OFL) — fonts 폴더의 원본 파일을 그대로 사용 */
+@font-face{
+  font-family:"Hakgyoansim Boardmarker";
+  src:url("./fonts/HakgyoansimBoardmarkerOTF-R.otf") format("opentype");
+  font-weight:400;
+  font-style:normal;
+  font-display:swap;
+}
+
 *{box-sizing:border-box}
 html{scroll-behavior:smooth}
 body{
   margin:0;
   background:var(--bg);
   color:var(--text);
-  font-family:Pretendard,"Apple SD Gothic Neo","Noto Sans KR",sans-serif;
+  font-family:"Hakgyoansim Boardmarker",Pretendard,"Apple SD Gothic Neo","Noto Sans KR",sans-serif;
   -webkit-font-smoothing:antialiased;
   word-break:keep-all;
 }
