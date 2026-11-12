@@ -61,7 +61,8 @@ button{cursor:pointer}
   justify-content:space-between;
   gap:24px;
 }
-.brand strong{display:block;font-size:16px;font-weight:800;letter-spacing:-.035em}
+.brand strong{display:block;font-size:19.2px;font-weight:800;letter-spacing:-.035em} /* 120% (원래 16px) */
+#siteQrBtn{font-size:16.8px} /* 학생 접속 QR 120% (원래 14px) */
 .brand small{
   display:block;
   margin-top:2px;
@@ -497,9 +498,10 @@ footer div{
 
 @media(max-width:620px){
   .site-header-inner{height:64px}
-  .brand strong{font-size:14px}
+  .brand strong{font-size:16.8px}
   .brand small{font-size:7px;letter-spacing:.1em}
-  .site-nav .outline-pill{min-height:38px;padding:0 11px;font-size:11px}
+  .site-nav .outline-pill{min-height:38px;padding:0 11px;font-size:13.2px}
+  #siteQrBtn{font-size:13.2px} /* 휴대폰: 120% (원래 11px) */
   .hero-section{padding:38px 0 48px}
   .hero-stats{gap:9px}
   .section-inner{width:calc(100% - 32px)}
