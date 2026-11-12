@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>학교 앞 가게, 보호구역일까?</title>
+<!--
+  ============================================================
+  새 앱 기본 틀
+  1) 이 폴더(app-template)를 복사해 영어 폴더 이름으로 바꿉니다. 예) probability
+  2) 아래 "앱 제목", 상단 문구, "도구 전용" 영역만 바꿉니다.
+  3) site-config.js의 TOOLS에 등록하면 홈페이지에 카드가 생깁니다.
+  ※ Claude에게 맡길 때는 '연수가이드/02_프롬프트모음.md'의 [프롬프트 B]를 쓰세요.
+  ============================================================
+-->
+<style>
+  /* ===== 내 수학 실험실 공통 테마 =====
+     이 :root 블록과 아래 "공통 셸" 영역은 모든 도구가 동일하게 유지합니다.
+     도구별 CSS는 파일 아래쪽 "도구 전용" 영역에만 추가하세요. */
+  :root{
+    --bg:#f2f0e9;
+    --panel:#fbf9f3;
+    --panel-2:#f4f1e9;
+    --line:#d8d2c7;
+    --border-soft:#eee9df;
+    --text:#15171a;
+    --muted:#6b6f74;
+    --faint:#9a958a;
+    --accent:#ff5a30;
+    --accent-weak:rgba(255,90,48,.14);
+    --lime:#d9f24f;
+    --shadow:0 10px 28px rgba(21,23,26,.055);
+    --radius:16px;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    background:
+      linear-gradient(rgba(21,23,26,.035) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(21,23,26,.035) 1px, transparent 1px),
+      var(--bg);
+    background-size:34px 34px;
+    color:var(--text);
+    font-family:Pretendard,"Apple SD Gothic Neo","Noto Sans KR",-apple-system,BlinkMacSystemFont,sans-serif;
+    letter-spacing:-.015em;
+    min-height:100vh;
+    -webkit-font-smoothing:antialiased;
+  }
+  button,input,select{font:inherit;color:inherit}
+  .num{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+
+  .app{width:100%;max-width:1180px;margin:0 auto;padding:12px;display:flex;flex-direction:column;gap:10px}
+
+  /* ---- 공통 셸: 상단바 ---- */
+  .topbar{
+    min-height:72px;
+    display:flex;
+    gap:14px;
+    justify-content:space-between;
+    align-items:center;
+    padding:10px 14px;
+    background:rgba(242,240,233,.90);
+    border:1px solid var(--line);
+    border-radius:18px;
+    backdrop-filter:blur(14px);
+  }
+  .brand-area{display:flex;align-items:center;gap:18px;min-width:0}
+  .home-link{
+    display:flex;align-items:center;gap:10px;flex:none;
+    color:var(--text);text-decoration:none;
+    padding:7px 10px 7px 8px;border-radius:12px;
+    transition:background .18s ease;
+  }
+  .home-link:hover{background:#e7e3d9}
+  .home-arrow{
+    width:31px;height:31px;border:1px solid #c9c4b8;border-radius:50%;
+    display:grid;place-items:center;font-size:16px;line-height:1;background:#fbf9f3;
+  }
+  .brand-copy{display:block;line-height:1.15}
+  .brand-copy strong{display:block;font-size:14px;font-weight:800;letter-spacing:-.035em}
+  .brand-copy small{
+    display:block;margin-top:4px;color:#8a8d90;
+    font-family:ui-monospace,SFMono-Regular,Consolas,monospace;
+    font-size:7.5px;letter-spacing:.13em;white-space:nowrap;
+  }
+  .top-divider{width:1px;height:34px;background:#d3cec3;flex:none}
+  .title-row{display:block;min-width:0}
+  .eyebrow{
+    display:flex;align-items:center;gap:7px;margin-bottom:4px;
+    color:#7b7770;font-size:10px;font-weight:750;white-space:nowrap;
+  }
+  .eyebrow span{display:block;width:18px;height:2px;background:var(--accent)}
+  h1{
+    font-size:clamp(18px,1.25vw,24px);
+    margin:0;
+    font-weight:800;letter-spacing:-.04em;white-space:nowrap;
+  }
+  h1 em{
+    font-style:normal;font-weight:500;
+    background:linear-gradient(transparent 60%,var(--lime) 0);
+    padding:0 .04em;
+  }
+  .subtitle{margin:4px 0 0;color:#666b6f;font-size:11.5px}
+  .badge{
+    display:inline-flex;align-items:center;gap:7px;flex:none;
+    background:#15171a;color:#fff;border:0;
+    border-radius:999px;padding:8px 12px;font-weight:700;font-size:12px;white-space:nowrap;
+  }
+  .dot{width:9px;height:9px;border-radius:50%;background:#73c48f}
+
+  /* ---- 공통 셸: 패널 ----
+     기본은 "넓은 그림 영역 + 좁은 설정 영역" 2단입니다.
+     패널 수가 다르면 grid-template-columns만 바꾸고, 좁은 화면에서 1단으로
+     떨어지는 @media (max-width:900px) 규칙은 남겨 두세요. */
+  .workspace{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(300px,1fr);gap:10px}
+  .panel{
+    min-width:0;
+    display:flex;flex-direction:column;
+    background:rgba(251,249,243,.96);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    box-shadow:var(--shadow);
+    overflow:hidden;
+  }
+  .panel-head{
+    flex:0 0 auto;
+    padding:12px 14px;
+    border-bottom:1px solid var(--line);
+    background:rgba(247,244,236,.92);
+  }
+  .panel-title{
+    font-size:15px;font-weight:800;letter-spacing:-.025em;
+    position:relative;padding-left:10px;
+  }
+  .panel-title::before{
+    content:"";position:absolute;left:0;top:.15em;bottom:.15em;
+    width:3px;border-radius:3px;background:var(--accent);
+  }
+  .panel-desc{color:#74716b;font-size:11.5px;margin-top:5px;line-height:1.45}
+  .panel-body{flex:1;min-height:0;padding:14px}
+
+  /* ---- 공통 셸: 버튼 ---- */
+  .btn{
+    border:1px solid #c9c4b8;background:#fbf9f3;color:#15171a;
+    border-radius:999px;font-weight:700;font-size:12.5px;
+    padding:9px 14px;cursor:pointer;line-height:1;
+    transition:background .15s ease,border-color .15s ease,transform .15s ease;
+  }
+  .btn:hover:not(:disabled){transform:translateY(-1px);border-color:#15171a;background:#f2efe6}
+  .btn:disabled{opacity:.4;cursor:not-allowed;transform:none}
+  .btn.primary{background:#15171a;color:#fff;border-color:#15171a}
+  .btn.primary:hover:not(:disabled){background:#2b2e31}
+  .btn.danger{color:#a73b2c}
+  .btn.icon-btn{width:38px;height:38px;padding:0;border-radius:10px;font-size:18px;display:grid;place-items:center}
+
+  /* ---- 공통 셸: 그림 영역 (캔버스·SVG) ---- */
+  .chart-wrap{background:#fff;border:1px solid #e3ded4;border-radius:12px;overflow:hidden;position:relative}
+  .chart-wrap canvas,.chart-wrap svg{display:block;width:100%;height:100%}
+
+  /* ---- 공통 셸: 입력·지표·안내 (쓰지 않는 것은 지우세요) ---- */
+  .controls{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+  .control{display:flex;flex-direction:column;gap:5px}
+  .control label{font-size:11px;color:var(--muted);font-weight:800}
+  .control input{
+    width:100%;padding:9px 10px;font-weight:700;
+    border:1px solid #d3cec3;background:#fff;color:var(--text);border-radius:10px;
+  }
+  .control input:focus{outline:3px solid rgba(217,242,79,.42);border-color:#9aa64b}
+  .control input[type="range"]{
+    padding:0;height:22px;border:0;border-radius:0;background:transparent;
+    accent-color:#15171a;cursor:pointer;
+  }
+  .checkbox-control{
+    justify-content:center;min-height:58px;padding:8px 10px;
+    border:1px solid var(--line);background:var(--panel-2);border-radius:12px;
+  }
+  .checkbox-control label{display:flex;align-items:center;gap:8px;color:var(--text);cursor:pointer;font-size:11px}
+  .checkbox-control input{width:17px;height:17px;padding:0;accent-color:#15171a;cursor:pointer}
+
+  .metrics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+  .metric{background:var(--panel-2);border:1px solid #ddd7cc;border-radius:11px;padding:8px 9px;min-width:0}
+  .metric .label{color:#77736d;font-size:10px;font-weight:800;margin-bottom:3px}
+  .metric .value{
+    font-size:15px;font-weight:850;color:var(--text);
+    font-variant-numeric:tabular-nums;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  }
+
+  .formula{
+    background:#15171a;color:#f6f2e9;border:1px solid #15171a;border-radius:12px;
+    padding:9px 10px;line-height:1.55;font-size:12px;
+    font-family:ui-monospace,SFMono-Regular,Consolas,monospace;overflow:auto;
+  }
+  .note{
+    padding:10px 12px;border-radius:10px;
+    background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;
+    font-size:11px;line-height:1.5;
+  }
+  .note b{color:#7c2d12;font-weight:800}
+  .status{min-height:19px;font-size:11px;line-height:1.4;font-weight:750;color:var(--muted)}
+  .status.ok{color:#32724f}
+  .status.error{color:#b44634}
+
+  .legend{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center}
+  .legend-item{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--muted)}
+  .legend-item i{width:11px;height:11px;border-radius:3px;flex:none}
+
+  /* ---- 공통 셸: 반응형 (이 3개 블록은 그대로 유지) ----
+     주의: .topbar에 align-items:stretch를 쓰면 알약 모양 .badge가
+     줄바꿈된 제목 높이만큼 세로로 늘어나 거대한 원처럼 깨집니다. */
+  @media (max-width:1080px){
+    .brand-copy small{display:none}
+    .brand-copy strong{font-size:13px}
+    .top-divider{height:28px}
+  }
+  @media (max-width:900px){
+    .workspace{grid-template-columns:1fr}
+  }
+  @media (max-width:820px){
+    .topbar{align-items:flex-start}
+    .brand-area{align-items:flex-start}
+    .home-link{padding-left:2px}
+    .top-divider{display:none}
+    .brand-copy{display:none}
+    .title-row{display:block}
+    h1{white-space:normal}
+    .eyebrow{white-space:normal}
+    .badge{display:none}
+  }
+  @media (max-width:520px){
+    .app{padding:7px}
+    .topbar{border-radius:14px;padding:9px 10px}
+    .home-arrow{width:34px;height:34px}
+    h1{font-size:20px;line-height:1.25}
+    .subtitle{font-size:11px;white-space:normal}
+    .panel{border-radius:14px}
+    .panel-head{padding:12px}
+    .btn{min-height:40px}
+    .controls{grid-template-columns:1fr}
+  }
+
+
+  /* ===== 도구 전용 CSS는 여기부터 ===== */
+  .workspace{align-items:start}
+  @media (min-width:901px){ .workspace{grid-template-columns:minmax(0,1.25fr) minmax(330px,1fr)} .map-panel{position:sticky;top:10px} }
+  .stage{aspect-ratio:4/3;touch-action:none;cursor:crosshair}
+  .steps{display:flex;gap:6px;flex-wrap:wrap}
+  .stp{border:1px solid #c9c4b8;background:#fbf9f3;border-radius:999px;padding:7px 11px;font-size:12px;font-weight:800;cursor:pointer;display:flex;gap:5px;align-items:center}
+  .stp.on{background:#15171a;color:#fff;border-color:#15171a}
+  .stp .ck{color:#2fa36b}
+  .stp.on .ck{color:#d9f24f}
+  .q{font-size:17px;font-weight:850;line-height:1.45;letter-spacing:-.03em;margin:0}
+  .do{background:#fff;border:1px solid #e3ded4;border-radius:12px;padding:10px 12px;font-size:13px;line-height:1.65}
+  .do b.k{display:inline-block;font-size:11px;font-weight:900;color:#fff;background:var(--accent);border-radius:6px;padding:1px 7px;margin-right:6px}
+  .find{background:#f1f8e4;border:1px solid #c8e3a1;border-radius:12px;padding:10px 12px;font-size:13px;line-height:1.65}
+  .find b.k{display:inline-block;font-size:11px;font-weight:900;color:#fff;background:#4c8a1f;border-radius:6px;padding:1px 7px;margin-right:6px}
+  .choices{display:flex;gap:6px;flex-wrap:wrap}
+  .choice{border:1px solid #c9c4b8;background:#fff;border-radius:999px;padding:8px 13px;font-size:13px;font-weight:700;cursor:pointer}
+  .choice.sel{background:#15171a;color:#fff;border-color:#15171a}
+  .choice.right{background:#2fa36b;color:#fff;border-color:#2fa36b}
+  .choice.wrong{background:#ffe1d8;border-color:#ff5a30}
+  .eqline{display:flex;flex-wrap:wrap;align-items:center;gap:5px;font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:15px;font-weight:700}
+  .eqline input{width:58px;padding:7px 4px;text-align:center;border:1px solid #d3cec3;border-radius:8px;background:#fff;font:inherit}
+  .eqline input.ok{border-color:#2fa36b;background:#eaf7ef}
+  .eqline input.no{border-color:#ff5a30;background:#fff1ec}
+  .fb{font-size:12.5px;font-weight:700;min-height:18px}
+  .fb.ok{color:#2f7a4b}.fb.no{color:#b44634}
+  .shops{width:100%;border-collapse:collapse;font-size:12.5px}
+  .shops th,.shops td{padding:6px 5px;border-bottom:1px solid var(--border-soft);text-align:center;vertical-align:middle}
+  .shops th{font-size:11px;color:var(--muted);background:var(--panel-2)}
+  .shops tr.sel td{background:var(--accent-weak)}
+  .shops tr{cursor:pointer}
+  .vsel{display:inline-flex;border:1px solid #c9c4b8;border-radius:999px;overflow:hidden}
+  .vsel button{border:0;background:#fff;padding:5px 8px;font-size:11.5px;font-weight:800;cursor:pointer}
+  .vsel button.on{background:#15171a;color:#fff}
+  .mark{font-weight:900}.mark.ok{color:#2fa36b}.mark.no{color:#ff5a30}
+  textarea.tx{width:100%;min-height:62px;padding:9px 10px;border:1px solid #d3cec3;border-radius:10px;background:#fff;font:inherit;font-size:13px;line-height:1.55;resize:vertical}
+  .notes{margin:0;padding-left:1.2em;font-size:12.5px;line-height:1.7}
+  .notes li{margin-bottom:2px}
+  .navrow{display:flex;justify-content:space-between;gap:8px}
+  .toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:#15171a;color:#fff;padding:10px 16px;border-radius:999px;font-size:13px;font-weight:700;z-index:50}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="topbar">
+    <div class="brand-area">
+      <!-- 홈으로 돌아가는 링크: ../#tools 를 바꾸지 마세요 -->
+      <a class="home-link" href="../#tools" aria-label="메인으로">
+        <span class="home-arrow">←</span>
+        <span class="brand-copy">
+          <strong data-site="name">내 수학 실험실</strong>
+          <small data-site="englishName">MATHEMATICS LABORATORY</small>
+        </span>
+      </a>
+      <span class="top-divider" aria-hidden="true"></span>
+      <div class="title-row">
+        <div class="eyebrow"><span></span>공통수학2 · 원의 방정식 · 점과 직선 사이의 거리</div>
+        <h1>학교 앞 가게, <em>보호구역</em>일까?</h1>
+        <p class="subtitle">지도 위에서 직접 재어 보며 원의 방정식과 점과 직선 사이의 거리를 발견하고, 가게 다섯 곳을 판정합니다.</p>
+      </div>
+    </div>
+    <div class="badge"><span class="dot"></span><span id="stateBadge">0 / 6 단계</span></div>
+  </div>
+
+  <div class="workspace">
+    <section class="panel map-panel">
+      <div class="panel-head">
+        <div class="panel-title">우리 학교 주변 지도</div>
+        <div class="panel-desc" id="mapHint">격자 1칸 = 10m. 출입문 G(20, 15), 학교 담장은 직선 3x + 4y − 120 = 0 위에 있습니다.</div>
+      </div>
+      <div class="panel-body">
+        <div class="chart-wrap stage" id="stage"><canvas id="cv"></canvas></div>
+        <div class="legend" style="margin-top:8px">
+          <span class="legend-item"><i style="background:#e9e2cf"></i>학교</span>
+          <span class="legend-item"><i style="background:#15171a"></i>담장(경계선)</span>
+          <span class="legend-item"><i style="background:#ff5a30"></i>출입문 G</span>
+          <span class="legend-item"><i style="background:#2f6fd6"></i>후보 가게 A~E</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head">
+        <div class="steps" id="steps"></div>
+      </div>
+      <div class="panel-body" id="side" style="display:flex;flex-direction:column;gap:12px"></div>
+    </section>
+  </div>
+</div>
+
+<!-- 홈페이지 이름을 site-config.js에서 가져와 상단에 표시합니다 -->
+<script src="../site-config.js"></script>
+<script>
+  if (typeof SITE !== "undefined") {
+    document.querySelectorAll("[data-site]").forEach(el => {
+      if (SITE[el.dataset.site]) el.textContent = SITE[el.dataset.site];
+    });
+  }
+</script>
+<script>
+  // ===== 도구 전용 JavaScript는 여기부터 =====
+  /* 상황 (1칸 = 10m)
+     · 절대보호구역: 학교 출입문에서 직선거리 50m(5칸) 이내
+     · 상대보호구역: 학교 경계선에서 직선거리 200m(20칸) 이내 (절대보호구역 제외)
+     · 이 활동에서는 가게 쪽 학교 경계선을 담장 직선 하나로 단순화함 */
+  const G = { x: 20, y: 15 }, R = 5, REL = 20;
+  const LINE = { a: 3, b: 4, c: -120 };                       // 3x + 4y − 120 = 0, (0,30)–(40,0)을 지남
+  const SHOPS = [
+    { id: "A", x: 22, y: 18, name: "분식집" },
+    { id: "B", x: 52, y: 30, name: "문구점" },
+    { id: "C", x: 16, y: 22, name: "PC방" },
+    { id: "D", x: 40, y: 25, name: "편의점" },
+    { id: "E", x: 34, y: 24, name: "노래방" }
+  ];
+  const W = 60, H = 45;
+  const dGate = p => Math.hypot(p.x - G.x, p.y - G.y);
+  const lv = p => LINE.a * p.x + LINE.b * p.y + LINE.c;
+  const dLine = p => Math.abs(lv(p)) / 5;
+  const foot = p => { const t = lv(p) / 25; return { x: p.x - 3 * t, y: p.y - 4 * t }; };
+  const zoneOf = p => dGate(p) <= R + 1e-9 ? "abs" : dLine(p) <= REL + 1e-9 ? "rel" : "out";
+  const ZN = { abs: "절대보호구역", rel: "상대보호구역", out: "보호구역 밖" };
+  const U = { x: 0.8, y: -0.6 }, L0 = { x: 0, y: 30 };          // 담장 방향 단위벡터, 기준점
+  const fmt = (v, d = 1) => { const r = Math.round(v * 10 ** d) / 10 ** d; return (Object.is(r, -0) ? 0 : r).toLocaleString("ko-KR", { maximumFractionDigits: d }); };
+  const $ = id => document.getElementById(id);
+  const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+  /* 상태 */
+  const KEY = "school-zone-circle-line.v1";
+  const fresh = () => ({ step: 0, pred: "", pins: [], shape: "", eq: { a: "", b: "", r: "" }, eqOk: false, side: "",
+    P: { x: 26, y: 20 }, s: 30, minPQ: 99, angle: "", P4: { x: 30, y: 30 }, f: { n: "", d: "", m: "" }, fOk: false,
+    verdict: {}, checked: false, sel: "A", refl1: "", refl2: "" });
+  let S = fresh();
+  try { const o = JSON.parse(localStorage.getItem(KEY)); if (o) S = Object.assign(fresh(), o); } catch (e) {}
+  let saveT = 0; const flush = () => { clearTimeout(saveT); try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} };
+  const save = () => { clearTimeout(saveT); saveT = setTimeout(flush, 200); };
+  window.addEventListener("pagehide", flush);
+  function toast(m) { const t = document.createElement("div"); t.className = "toast"; t.textContent = m; t.setAttribute("role", "status"); document.body.appendChild(t); setTimeout(() => t.remove(), 2000); }
+
+  const exact50 = () => S.pins.filter(p => Math.abs(dGate(p) - R) < 1e-9).length;
+  const allRight = () => SHOPS.every(s => S.verdict[s.id] === zoneOf(s));
+  const DONE = [
+    () => !!S.pred,
+    () => exact50() >= 4 && S.shape === "circle",
+    () => S.eqOk && S.side === "in",
+    () => S.minPQ <= 3.25 && S.angle === "90",
+    () => S.fOk,
+    () => S.checked && allRight()
+  ];
+  const STEPS = ["상황", "50m 찾기", "원의 방정식", "가장 짧은 길", "거리 공식", "가게 판정"];
+
+  /* ---------- 지도 그리기 ---------- */
+  const cv = $("cv"), ctx = cv.getContext("2d");
+  let M = null;   // 좌표 변환
+  function draw() {
+    const r = cv.getBoundingClientRect(), dpr = window.devicePixelRatio || 1;
+    const w = Math.max(1, Math.round(r.width * dpr)), h = Math.max(1, Math.round(r.height * dpr));
+    if (cv.width !== w || cv.height !== h) { cv.width = w; cv.height = h; }
+    const g = ctx; g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, w, h);
+    const pad = 22 * dpr, sc = Math.min((w - pad - 8 * dpr) / W, (h - pad - 8 * dpr) / H);
+    if (!(sc > 0)) return;                       // 화면이 아직 그려지지 않았을 때
+    const ox = pad, oy = h - pad;
+    const X = x => ox + x * sc, Y = y => oy - y * sc;
+    M = { X, Y, sc, ox, oy, dpr, cssScale: r.width / w };
+    // 격자
+    for (let x = 0; x <= W; x++) { g.strokeStyle = x % 10 ? "#f1ede4" : "#ddd6ca"; g.lineWidth = dpr; g.beginPath(); g.moveTo(X(x), Y(0)); g.lineTo(X(x), Y(H)); g.stroke(); }
+    for (let y = 0; y <= H; y++) { g.strokeStyle = y % 10 ? "#f1ede4" : "#ddd6ca"; g.lineWidth = dpr; g.beginPath(); g.moveTo(X(0), Y(y)); g.lineTo(X(W), Y(y)); g.stroke(); }
+    g.fillStyle = "#9a958a"; g.font = `${9.5 * dpr}px ui-monospace,Consolas,monospace`; g.textAlign = "center"; g.textBaseline = "top";
+    for (let x = 0; x <= W; x += 10) g.fillText(x, X(x), Y(0) + 4 * dpr);
+    g.textAlign = "right"; g.textBaseline = "middle";
+    for (let y = 10; y <= H; y += 10) g.fillText(y, X(0) - 4 * dpr, Y(y));
+    // 학교 (담장 아래 삼각형)
+    g.fillStyle = "rgba(233,226,207,.85)"; g.beginPath(); g.moveTo(X(0), Y(0)); g.lineTo(X(40), Y(0)); g.lineTo(X(0), Y(30)); g.closePath(); g.fill();
+    g.fillStyle = "#8a7f62"; g.font = `800 ${13 * dpr}px sans-serif`; g.textAlign = "center"; g.fillText("학교", X(9), Y(8));
+
+    const done5 = DONE[5]();
+    // 5단계 완료: 보호구역 전체 보기
+    if (S.step === 5 && done5) {
+      g.save(); g.beginPath(); g.rect(X(0), Y(H), W * sc, H * sc); g.clip();
+      g.fillStyle = "rgba(47,111,214,.13)"; const n = { x: 0.6, y: 0.8 };
+      g.beginPath(); g.moveTo(X(L0.x - U.x * 80), Y(L0.y - U.y * 80)); g.lineTo(X(L0.x + U.x * 80), Y(L0.y + U.y * 80));
+      g.lineTo(X(L0.x + U.x * 80 + n.x * REL), Y(L0.y + U.y * 80 + n.y * REL)); g.lineTo(X(L0.x - U.x * 80 + n.x * REL), Y(L0.y - U.y * 80 + n.y * REL)); g.closePath(); g.fill();
+      g.restore();
+      g.setLineDash([5 * dpr, 4 * dpr]); g.strokeStyle = "rgba(47,111,214,.8)"; g.lineWidth = 1.5 * dpr;
+      g.beginPath(); g.moveTo(X(L0.x - U.x * 80 + 0.6 * REL), Y(L0.y - U.y * 80 + 0.8 * REL)); g.lineTo(X(L0.x + U.x * 80 + 0.6 * REL), Y(L0.y + U.y * 80 + 0.8 * REL)); g.stroke(); g.setLineDash([]);
+      g.fillStyle = "#2f6fd6"; g.font = `800 ${11 * dpr}px sans-serif`; g.textAlign = "left"; g.textBaseline = "bottom";
+      g.fillText("상대보호구역 경계 (담장에서 200m)", X(24), Y(42));
+    }
+    // 담장 직선
+    g.strokeStyle = "#15171a"; g.lineWidth = 3 * dpr; g.beginPath(); g.moveTo(X(0), Y(30)); g.lineTo(X(40), Y(0)); g.stroke();
+    g.fillStyle = "#15171a"; g.font = `800 ${11 * dpr}px ui-monospace,Consolas,monospace`; g.textAlign = "left"; g.textBaseline = "bottom";
+    g.save(); g.translate(X(2), Y(28.2)); g.rotate(Math.atan2(30, 40)); g.fillText("담장 3x+4y−120=0", 0, -4 * dpr); g.restore();
+
+    // 원 (1단계 정답 후, 2단계, 5단계)
+    const showCircle = (S.step === 1 && S.shape === "circle") || S.step === 2 || (S.step === 5 && done5);
+    if (showCircle) { g.fillStyle = "rgba(255,90,48,.14)"; g.strokeStyle = "#ff5a30"; g.lineWidth = 2 * dpr; g.beginPath(); g.arc(X(G.x), Y(G.y), R * sc, 0, 7); g.fill(); g.stroke(); }
+
+    // 단계별 그림
+    if (S.step === 1) {
+      S.pins.forEach(p => {
+        const d = dGate(p), on = Math.abs(d - R) < 1e-9, inn = d < R;
+        dot(X(p.x), Y(p.y), 4.5, on ? "#ff5a30" : inn ? "#ffb39f" : "#9a958a");
+        label(`${fmt(d * 10, 0)}m`, X(p.x) + 6 * dpr, Y(p.y) - 4 * dpr, on ? "#c2401f" : "#6b6f74", 10);
+      });
+    }
+    if (S.step === 2) {
+      const P = S.P;
+      g.setLineDash([4 * dpr, 3 * dpr]); g.strokeStyle = "#2f6fd6"; g.lineWidth = 1.5 * dpr;
+      g.beginPath(); g.moveTo(X(G.x), Y(G.y)); g.lineTo(X(P.x), Y(G.y)); g.lineTo(X(P.x), Y(P.y)); g.stroke(); g.setLineDash([]);
+      g.strokeStyle = "#15171a"; g.lineWidth = 2 * dpr; g.beginPath(); g.moveTo(X(G.x), Y(G.y)); g.lineTo(X(P.x), Y(P.y)); g.stroke();
+      label(`x−20 = ${P.x - 20}`, (X(G.x) + X(P.x)) / 2, Y(G.y) + (P.y >= G.y ? 13 : -6) * dpr, "#2f6fd6", 10.5, "center");
+      label(`y−15 = ${P.y - 15}`, X(P.x) + 5 * dpr, (Y(G.y) + Y(P.y)) / 2, "#2f6fd6", 10.5);
+      dot(X(P.x), Y(P.y), 7, "#2f6fd6", true); label("P", X(P.x) + 8 * dpr, Y(P.y) - 8 * dpr, "#2f6fd6", 13);
+    }
+    if (S.step === 3) {
+      const P = SHOPS[2], Q = { x: L0.x + U.x * S.s, y: L0.y + U.y * S.s };
+      if (S.angle === "90") { const F = foot(P); g.setLineDash([3 * dpr, 3 * dpr]); g.strokeStyle = "#2fa36b"; g.lineWidth = 2 * dpr; g.beginPath(); g.moveTo(X(P.x), Y(P.y)); g.lineTo(X(F.x), Y(F.y)); g.stroke(); g.setLineDash([]); rightAngle(F, P); }
+      g.strokeStyle = "#7a4fd1"; g.lineWidth = 2.4 * dpr; g.beginPath(); g.moveTo(X(P.x), Y(P.y)); g.lineTo(X(Q.x), Y(Q.y)); g.stroke();
+      const len = Math.hypot(P.x - Q.x, P.y - Q.y);
+      label(`${fmt(len * 10, 0)}m`, (X(P.x) + X(Q.x)) / 2 + 6 * dpr, (Y(P.y) + Y(Q.y)) / 2, "#7a4fd1", 12);
+      shopMark(P, true); dot(X(Q.x), Y(Q.y), 7, "#7a4fd1", true); label("Q", X(Q.x) + 8 * dpr, Y(Q.y) + 12 * dpr, "#7a4fd1", 13);
+    }
+    if (S.step === 4) {
+      const P = S.P4, F = foot(P);
+      g.strokeStyle = "#2fa36b"; g.lineWidth = 2.4 * dpr; g.beginPath(); g.moveTo(X(P.x), Y(P.y)); g.lineTo(X(F.x), Y(F.y)); g.stroke(); rightAngle(F, P);
+      label(`${fmt(dLine(P) * 10, 1)}m`, (X(P.x) + X(F.x)) / 2 + 6 * dpr, (Y(P.y) + Y(F.y)) / 2, "#2f7a4b", 12);
+      dot(X(P.x), Y(P.y), 7, "#2f6fd6", true); label(`P(${P.x}, ${P.y})`, X(P.x) + 8 * dpr, Y(P.y) - 8 * dpr, "#2f6fd6", 12);
+    }
+    if (S.step === 5) {
+      const s = SHOPS.find(x => x.id === S.sel);
+      if (s) {
+        const F = foot(s);
+        g.setLineDash([4 * dpr, 3 * dpr]); g.lineWidth = 1.8 * dpr;
+        g.strokeStyle = "#ff5a30"; g.beginPath(); g.moveTo(X(G.x), Y(G.y)); g.lineTo(X(s.x), Y(s.y)); g.stroke();
+        g.strokeStyle = "#2fa36b"; g.beginPath(); g.moveTo(X(s.x), Y(s.y)); g.lineTo(X(F.x), Y(F.y)); g.stroke(); g.setLineDash([]);
+        rightAngle(F, s);
+      }
+    }
+    // 출입문
+    g.fillStyle = "#ff5a30"; g.beginPath(); g.rect(X(G.x) - 6 * dpr, Y(G.y) - 6 * dpr, 12 * dpr, 12 * dpr); g.fill();
+    g.strokeStyle = "#fff"; g.lineWidth = 2 * dpr; g.stroke();
+    label("G 출입문", X(G.x) - 9 * dpr, Y(G.y) + 14 * dpr, "#c2401f", 11.5, "right");
+    // 가게
+    if (S.step === 0 || S.step === 5) SHOPS.forEach(s => shopMark(s, S.step === 5 && s.id === S.sel));
+
+    function dot(x, y, r, c, ring) { g.beginPath(); g.arc(x, y, r * dpr, 0, 7); g.fillStyle = c; g.fill(); if (ring) { g.strokeStyle = "#fff"; g.lineWidth = 2 * dpr; g.stroke(); } }
+    function label(t, x, y, c, size, align = "left") { g.font = `800 ${size * dpr}px sans-serif`; g.textAlign = align; g.textBaseline = "middle"; g.lineWidth = 3.5 * dpr; g.strokeStyle = "rgba(255,255,255,.92)"; g.strokeText(t, x, y); g.fillStyle = c; g.fillText(t, x, y); }
+    function shopMark(s, sel) {
+      const x = X(s.x), y = Y(s.y);
+      g.fillStyle = sel ? "#15171a" : "#2f6fd6"; g.beginPath(); g.moveTo(x, y - 8 * dpr); g.lineTo(x + 7 * dpr, y); g.lineTo(x, y + 8 * dpr); g.lineTo(x - 7 * dpr, y); g.closePath(); g.fill();
+      g.strokeStyle = "#fff"; g.lineWidth = 1.5 * dpr; g.stroke();
+      label(`${s.id} ${s.name}`, x + 10 * dpr, y, sel ? "#15171a" : "#2f6fd6", 11.5);
+    }
+    function rightAngle(F, P) {
+      const v = { x: P.x - F.x, y: P.y - F.y }, n = Math.hypot(v.x, v.y) || 1, k = 0.9;
+      const a = { x: F.x + v.x / n * k, y: F.y + v.y / n * k }, b = { x: F.x + U.x * k, y: F.y + U.y * k }, c = { x: a.x + U.x * k, y: a.y + U.y * k };
+      g.strokeStyle = "#2fa36b"; g.lineWidth = 1.5 * dpr; g.beginPath(); g.moveTo(X(a.x), Y(a.y)); g.lineTo(X(c.x), Y(c.y)); g.lineTo(X(b.x), Y(b.y)); g.stroke();
+    }
+  }
+
+  /* ---------- 지도 조작 ---------- */
+  function world(e) {
+    const r = cv.getBoundingClientRect(), dpr = window.devicePixelRatio || 1;
+    const px = (e.clientX - r.left) * dpr, py = (e.clientY - r.top) * dpr;
+    return { x: (px - M.ox) / M.sc, y: (M.oy - py) / M.sc };
+  }
+  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+  let dragging = false;
+  cv.addEventListener("pointerdown", e => {
+    if (!M) return;
+    const p = world(e);
+    if (S.step === 1) {
+      const q = { x: Math.round(clamp(p.x, 0, W)), y: Math.round(clamp(p.y, 0, H)) };
+      const i = S.pins.findIndex(t => t.x === q.x && t.y === q.y);
+      if (i >= 0) S.pins.splice(i, 1); else if (S.pins.length < 24) S.pins.push(q); else toast("점은 24개까지 찍을 수 있어요");
+      save(); refresh(); return;
+    }
+    if (S.step === 5) {
+      let best = null, bd = 2.2;
+      SHOPS.forEach(s => { const d = Math.hypot(s.x - p.x, s.y - p.y); if (d < bd) { bd = d; best = s; } });
+      if (best) { S.sel = best.id; save(); refresh(); }
+      return;
+    }
+    if ([2, 3, 4].includes(S.step)) { dragging = true; cv.setPointerCapture(e.pointerId); move(p); }
+  });
+  cv.addEventListener("pointermove", e => { if (dragging) move(world(e)); });
+  const stop = () => { if (dragging) { dragging = false; save(); } };
+  cv.addEventListener("pointerup", stop); cv.addEventListener("pointercancel", stop);
+  function move(p) {
+    if (S.step === 2) S.P = { x: Math.round(clamp(p.x, 0, W)), y: Math.round(clamp(p.y, 0, H)) };
+    if (S.step === 3) {
+      const s = Math.round(clamp((p.x - L0.x) * U.x + (p.y - L0.y) * U.y, -5, 50) * 5) / 5;   // 담장 위로 투영, 0.2칸(2m) 단위
+      S.s = s; const P = SHOPS[2], Q = { x: L0.x + U.x * s, y: L0.y + U.y * s };
+      S.minPQ = Math.min(S.minPQ, Math.hypot(P.x - Q.x, P.y - Q.y));
+    }
+    if (S.step === 4) S.P4 = { x: Math.round(clamp(p.x, 0, W)), y: Math.round(clamp(p.y, 0, H)) };
+    refresh();
+  }
+
+  /* ---------- 오른쪽 단계 화면 ---------- */
+  const side = $("side");
+  const FIND = [
+    "",
+    "출입문에서 거리가 50m(5칸)인 점들은 G를 중심으로 하는 반지름 5인 <b>원</b> 위에 있다.",
+    "중심 G(20, 15), 반지름 5인 원의 방정식은 <b>(x − 20)² + (y − 15)² = 25</b>. 점을 대입한 값이 25보다 작으면 원의 안쪽, 같으면 원 위, 크면 바깥쪽이다.",
+    "점에서 직선까지의 거리는 점에서 직선에 내린 <b>수선의 길이</b>로, 가장 짧은 길은 직선과 <b>수직</b>으로 만난다.",
+    "점 (x₁, y₁)과 직선 ax + by + c = 0 사이의 거리는 <b>|ax₁ + by₁ + c| ÷ √(a² + b²)</b>. 수선을 그리지 않아도 계산할 수 있다.",
+    "출입문에서의 거리(원)와 담장에서의 거리(직선)는 서로 다른 기준이다. 출입문에서 멀어도 담장에 가까우면 보호구역이 될 수 있다."
+  ];
+  function findBox(i) { return DONE[i]() && FIND[i] ? `<div class="find"><b class="k">발견</b>${FIND[i]}</div>` : ""; }
+
+  function renderSteps() {
+    $("steps").innerHTML = STEPS.map((t, i) => `<button type="button" class="stp${S.step === i ? " on" : ""}" data-i="${i}">${DONE[i]() ? '<span class="ck">✓</span>' : `<span>${i}</span>`}${t}</button>`).join("");
+    $("steps").querySelectorAll(".stp").forEach(b => b.onclick = () => go(+b.dataset.i));
+    $("stateBadge").textContent = `${DONE.filter(f => f()).length} / 6 단계`;
+  }
+  function go(i) { S.step = i; save(); refresh(); if (window.innerWidth <= 900) document.querySelector(".map-panel").scrollIntoView({ behavior: "smooth" }); }
+  function navRow(i) {
+    return `<div class="navrow"><button class="btn" type="button" data-go="${i - 1}" ${i === 0 ? "disabled" : ""}>← 이전</button>` +
+      (i < 5 ? `<button class="btn primary" type="button" data-go="${i + 1}" ${DONE[i]() ? "" : "disabled"}>다음 단계 →</button>` : "") + `</div>`;
+  }
+  const choiceRow = (key, opts, right) => `<div class="choices">${opts.map(([v, t]) => {
+    const sel = S[key] === v, cls = sel ? (right ? (v === right ? "right" : "wrong") : "sel") : "";
+    return `<button type="button" class="choice ${cls}" data-k="${key}" data-v="${v}">${t}</button>`; }).join("")}</div>`;
+
+  function renderSide() {
+    const i = S.step; let h = "";
+    if (i === 0) {
+      h = `<p class="q">학교 앞에 가게 다섯 곳이 문을 열려고 합니다. 어느 가게가 교육환경보호구역에 들어갈까요?</p>
+        <div class="do"><b class="k">규칙</b>· <b>절대보호구역</b>: 학교 <b>출입문</b>에서 직선거리 <b>50m</b> 이내<br>· <b>상대보호구역</b>: 학교 <b>경계선</b>에서 직선거리 <b>200m</b> 이내 (절대보호구역 제외)<br><span style="color:var(--muted);font-size:12px">이 활동에서는 가게 쪽 학교 경계선을 담장 직선 하나로 생각합니다. 격자 1칸 = 10m.</span></div>
+        <div class="do"><b class="k">예상</b><b>C PC방</b>은 출입문 G에서 약 80m 떨어져 있습니다. 보호구역일까요? 먼저 직감으로 골라 보세요.</div>
+        ${choiceRow("pred", [["abs", "절대보호구역"], ["rel", "상대보호구역"], ["out", "보호구역 밖"]])}
+        <p class="panel-desc" style="margin:0">정답은 마지막 단계에서 직접 확인합니다.</p>`;
+    }
+    if (i === 1) {
+      const n = exact50();
+      h = `<p class="q">출입문에서 정확히 50m 떨어진 곳은 어디에 있을까?</p>
+        <div class="do"><b class="k">해 보기</b>지도의 격자점을 눌러 점을 찍으면 출입문 G까지의 거리가 나옵니다. <b>정확히 50m</b>인 점을 4개 이상 찾아보세요. (다시 누르면 지워져요)</div>
+        <div class="metrics"><div class="metric"><div class="label">찍은 점</div><div class="value num">${S.pins.length}개</div></div><div class="metric"><div class="label">정확히 50m인 점</div><div class="value num">${n}개</div></div></div>
+        ${n >= 4 ? `<div class="do"><b class="k">생각</b>50m인 점들을 모두 이으면 어떤 모양이 될까요?</div>${choiceRow("shape", [["square", "정사각형"], ["circle", "원"], ["diamond", "마름모"]], "circle")}` :
+          `<p class="panel-desc" style="margin:0">힌트: G에서 오른쪽으로 5칸 간 점은 50m예요. 대각선 방향에서는 (3칸, 4칸)처럼 움직여 보세요.</p>`}
+        ${S.shape && S.shape !== "circle" ? `<div class="fb no">찍은 점들을 다시 보세요. 모든 방향에서 G까지의 거리가 같아요.</div>` : ""}
+        ${findBox(1)}`;
+    }
+    if (i === 2) {
+      const P = S.P, v = (P.x - 20) ** 2 + (P.y - 15) ** 2, rel = v < 25 ? "25보다 작다" : v === 25 ? "25와 같다" : "25보다 크다";
+      h = `<p class="q">원 위의 점이 만족하는 식은 무엇일까?</p>
+        <div class="do"><b class="k">해 보기</b>지도에서 점 P를 끌어 움직여 보세요. 파란 점선은 가로·세로로 움직인 칸 수입니다.</div>
+        <div class="formula">P(${P.x}, ${P.y})<br>(x − 20)² + (y − 15)² = (${P.x - 20})² + (${P.y - 15})² = <b style="color:#d9f24f">${v}</b><br>
+        G까지의 거리 = √${v} ≈ ${fmt(Math.sqrt(v), 2)}칸 = ${fmt(Math.sqrt(v) * 10, 1)}m · <b style="color:#d9f24f">${rel}</b></div>
+        <div class="do"><b class="k">식 세우기</b>출입문 G에서 50m(5칸)인 점 (x, y)가 만족하는 식을 완성하세요.
+          <div class="eqline" style="margin-top:8px">(x − <input id="ea" inputmode="numeric" value="${esc(S.eq.a)}" aria-label="중심의 x좌표">)² + (y − <input id="eb" inputmode="numeric" value="${esc(S.eq.b)}" aria-label="중심의 y좌표">)² = <input id="er" inputmode="numeric" value="${esc(S.eq.r)}" aria-label="반지름의 제곱"></div>
+          <div style="margin-top:8px"><button class="btn" type="button" id="eqBtn">확인</button> <span class="fb ${S.eqOk ? "ok" : ""}" id="eqFb">${S.eqOk ? "맞았어요!" : ""}</span></div></div>
+        ${S.eqOk ? `<div class="do"><b class="k">생각</b>P를 원 안쪽, 원 위, 바깥쪽에 두고 값을 비교해 보세요. (x − 20)² + (y − 15)²의 값이 <b>25보다 작으면</b> P는 어디에 있을까요?</div>
+          ${choiceRow("side", [["in", "원의 안쪽 (50m 이내)"], ["on", "원 위"], ["outside", "원의 바깥쪽"]], "in")}` : ""}
+        ${findBox(2)}`;
+    }
+    if (i === 3) {
+      const P = SHOPS[2], Q = { x: L0.x + U.x * S.s, y: L0.y + U.y * S.s }, len = Math.hypot(P.x - Q.x, P.y - Q.y);
+      const v = { x: Q.x - P.x, y: Q.y - P.y }, ang = Math.acos(Math.min(1, Math.abs(v.x * U.x + v.y * U.y) / (Math.hypot(v.x, v.y) || 1))) * 180 / Math.PI;
+      h = `<p class="q">C PC방에서 담장까지 가장 가까운 거리는 어떻게 잴까?</p>
+        <div class="do"><b class="k">해 보기</b>담장 위의 점 Q를 끌어 담장을 따라 움직여 보세요. C에서 Q까지의 거리가 <b>가장 짧아지는 곳</b>을 찾아보세요.</div>
+        <div class="metrics"><div class="metric"><div class="label">지금 CQ</div><div class="value num">${fmt(len * 10, 0)}m</div></div><div class="metric"><div class="label">내가 찾은 가장 짧은 CQ</div><div class="value num">${S.minPQ < 90 ? fmt(S.minPQ * 10, 0) + "m" : "—"}</div></div></div>
+        <div class="formula">CQ와 담장이 이루는 각 ≈ <b style="color:#d9f24f">${fmt(ang, 0)}°</b></div>
+        ${S.minPQ <= 3.25 ? `<div class="do"><b class="k">생각</b>가장 짧아졌을 때 CQ와 담장이 이루는 각은 몇 도였나요?</div>${choiceRow("angle", [["45", "45°"], ["60", "60°"], ["90", "90°"]], "90")}` :
+          `<p class="panel-desc" style="margin:0">Q를 천천히 움직이며 거리가 줄었다가 다시 늘어나는 곳을 찾아보세요.</p>`}
+        ${findBox(3)}`;
+    }
+    if (i === 4) {
+      const P = S.P4, val = 3 * P.x + 4 * P.y - 120;
+      h = `<p class="q">수선을 그리지 않고도 담장까지의 거리를 계산할 수 있을까?</p>
+        <div class="do"><b class="k">해 보기</b>지도에서 점 P를 끌어 보세요. 초록 선(수선)의 길이와 아래 공식으로 계산한 값을 비교해 보세요.</div>
+        <div class="formula">P(${P.x}, ${P.y}), 담장 3x + 4y − 120 = 0<br>
+          |3×${P.x} + 4×${P.y} − 120| ÷ √(3² + 4²) = |${val}| ÷ 5 = <b style="color:#d9f24f">${fmt(Math.abs(val) / 5, 2)}칸</b><br>
+          = ${fmt(Math.abs(val) / 5 * 10, 1)}m ← 지도의 초록 수선 길이와 같나요?</div>
+        <div class="do"><b class="k">계산하기</b><b>E 노래방</b> (34, 24)에서 담장까지의 거리를 공식으로 구하세요.
+          <div class="eqline" style="margin-top:8px">|3×34 + 4×24 − 120| = <input id="fn" inputmode="numeric" value="${esc(S.f.n)}" aria-label="분자"></div>
+          <div class="eqline" style="margin-top:6px">√(3² + 4²) = <input id="fd" inputmode="numeric" value="${esc(S.f.d)}" aria-label="분모"></div>
+          <div class="eqline" style="margin-top:6px">거리 = <input id="fm" inputmode="decimal" value="${esc(S.f.m)}" aria-label="거리(m)" style="width:76px"> m</div>
+          <div style="margin-top:8px"><button class="btn" type="button" id="fBtn">확인</button> <span class="fb ${S.fOk ? "ok" : ""}" id="fFb">${S.fOk ? "맞았어요! 15.6칸 = 156m" : ""}</span></div></div>
+        ${findBox(4)}`;
+    }
+    if (i === 5) {
+      const s = SHOPS.find(x => x.id === S.sel) || SHOPS[0];
+      const v = (s.x - 20) ** 2 + (s.y - 15) ** 2, n = Math.abs(3 * s.x + 4 * s.y - 120);
+      h = `<p class="q">다섯 가게는 각각 어느 구역일까?</p>
+        <div class="do"><b class="k">해 보기</b>표나 지도에서 가게를 고르면 두 가지 계산이 나옵니다. 계산을 보고 <b>절대·상대·밖</b> 중 하나를 고른 뒤 확인하세요.</div>
+        <div class="formula"><b>${s.id} ${s.name}</b> (${s.x}, ${s.y})<br>
+          ① 원: (${s.x} − 20)² + (${s.y} − 15)² = <b style="color:#d9f24f">${v}</b> ${v <= 25 ? "≤" : ">"} 25 → 출입문에서 ${v <= 25 ? "50m 이내" : "50m보다 멂"}<br>
+          ② 직선: |3×${s.x} + 4×${s.y} − 120| ÷ 5 = ${n} ÷ 5 = ${fmt(n / 5, 1)}칸 = <b style="color:#d9f24f">${fmt(n / 5 * 10, 0)}m</b> ${n / 5 <= REL ? "≤" : ">"} 200m</div>
+        <table class="shops"><thead><tr><th>가게</th><th>나의 판정</th><th></th></tr></thead><tbody>
+        ${SHOPS.map(x => { const my = S.verdict[x.id], ok = my === zoneOf(x);
+          return `<tr data-shop="${x.id}" class="${x.id === S.sel ? "sel" : ""}"><td style="text-align:left"><b>${x.id}</b> ${x.name}</td><td><span class="vsel">${[["abs", "절대"], ["rel", "상대"], ["out", "밖"]].map(([k, t]) => `<button type="button" data-v="${x.id}:${k}" class="${my === k ? "on" : ""}">${t}</button>`).join("")}</span></td><td>${S.checked && my ? `<span class="mark ${ok ? "ok" : "no"}">${ok ? "○" : "×"}</span>` : ""}</td></tr>`; }).join("")}
+        </tbody></table>
+        <div><button class="btn primary" type="button" id="vBtn">판정 확인</button> <span class="fb" id="vFb">${S.checked ? (allRight() ? "" : `<span class="no">× 표시한 가게의 계산을 다시 보세요. 두 기준을 모두 확인해야 해요.</span>`) : ""}</span></div>
+        ${DONE[5]() ? `${findBox(5)}
+          <div class="do"><b class="k">예상 돌아보기</b>처음에 C PC방을 <b>${ZN[S.pred] || "—"}</b>(으)로 예상했어요. 실제로는 출입문에서 약 81m지만 담장에서 32m라 <b>상대보호구역</b>입니다.</div>
+          <label class="do" style="display:block"><b class="k">정리</b>원의 방정식과 점과 직선 사이의 거리는 각각 어떤 질문에 답해 주었나요?<textarea class="tx" id="r1" style="margin-top:6px" placeholder="예: 원의 방정식은 출입문에서 50m 안인지를, 점과 직선 사이의 거리는 ...">${esc(S.refl1)}</textarea></label>
+          <label class="do" style="display:block"><b class="k">만약</b>실제로 걸어가는 길로 거리를 잰다면 판정이 어떻게 달라질까요? 이 수학 모델이 놓친 현실은 무엇일까요?<textarea class="tx" id="r2" style="margin-top:6px" placeholder="예: 길이 돌아가면 걷는 거리는 더 길어지지만 ...">${esc(S.refl2)}</textarea></label>
+          <button class="btn" type="button" id="copyBtn">탐구 결과 복사</button>` : ""}`;
+    }
+    const notes = FIND.map((t, k) => DONE[k]() && t ? `<li>${t}</li>` : "").join("");
+    side.innerHTML = h + (notes && i !== 0 ? `<details class="do"><summary style="cursor:pointer;font-weight:800">나의 발견 노트 (${FIND.filter((t, k) => DONE[k]() && t).length})</summary><ul class="notes" style="margin-top:6px">${notes}</ul></details>` : "") + navRow(i);
+    bind();
+  }
+
+  function bind() {
+    side.querySelectorAll("[data-go]").forEach(b => b.onclick = () => go(+b.dataset.go));
+    side.querySelectorAll(".choice").forEach(b => b.onclick = () => { S[b.dataset.k] = b.dataset.v; save(); refresh(); if (DONE[S.step]()) toast("발견했어요! 다음 단계로 가 보세요"); });
+    const eqBtn = $("eqBtn");
+    if (eqBtn) {
+      ["ea", "eb", "er"].forEach(id => $(id).oninput = e => { S.eq[{ ea: "a", eb: "b", er: "r" }[id]] = e.target.value.trim(); save(); });
+      eqBtn.onclick = () => {
+        const ok = { ea: +S.eq.a === 20, eb: +S.eq.b === 15, er: +S.eq.r === 25 };
+        Object.keys(ok).forEach(id => { $(id).classList.toggle("ok", ok[id]); $(id).classList.toggle("no", !ok[id] && $(id).value !== ""); });
+        S.eqOk = ok.ea && ok.eb && ok.er; save();
+        if (S.eqOk) refresh(); else { $("eqFb").className = "fb no"; $("eqFb").textContent = !ok.er && ok.ea && ok.eb ? "반지름이 5칸이면 오른쪽은 5가 아니라 5²이에요." : "중심은 출입문 G의 좌표예요."; }
+      };
+    }
+    const fBtn = $("fBtn");
+    if (fBtn) {
+      ["fn", "fd", "fm"].forEach(id => $(id).oninput = e => { S.f[{ fn: "n", fd: "d", fm: "m" }[id]] = e.target.value.trim(); save(); });
+      fBtn.onclick = () => {
+        const ok = { fn: +S.f.n === 78, fd: +S.f.d === 5, fm: Math.abs(+S.f.m - 156) < 0.01 };
+        Object.keys(ok).forEach(id => { $(id).classList.toggle("ok", ok[id]); $(id).classList.toggle("no", !ok[id] && $(id).value !== ""); });
+        S.fOk = ok.fn && ok.fd && ok.fm; save();
+        if (S.fOk) refresh(); else { $("fFb").className = "fb no"; $("fFb").textContent = !ok.fn ? "3×34 + 4×24 − 120을 먼저 계산해 보세요." : !ok.fd ? "√(9 + 16)은 얼마일까요?" : "78 ÷ 5 = 15.6칸이에요. 1칸 = 10m로 바꿔 보세요."; }
+      };
+    }
+    side.querySelectorAll("tr[data-shop]").forEach(tr => tr.onclick = e => { if (e.target.closest("button")) return; S.sel = tr.dataset.shop; save(); refresh(); });
+    side.querySelectorAll(".vsel button").forEach(b => b.onclick = () => { const [id, v] = b.dataset.v.split(":"); S.verdict[id] = v; S.sel = id; S.checked = false; save(); refresh(); });
+    const vBtn = $("vBtn");
+    if (vBtn) vBtn.onclick = () => {
+      if (SHOPS.some(s => !S.verdict[s.id])) { $("vFb").innerHTML = `<span class="no">다섯 가게를 모두 판정해 주세요.</span>`; return; }
+      S.checked = true; save(); refresh(); toast(allRight() ? "모두 맞았어요! 지도에 보호구역 전체가 나타났어요" : "틀린 가게를 다시 계산해 보세요");
+    };
+    ["r1", "r2"].forEach(id => { const t = $(id); if (t) t.oninput = () => { S[id === "r1" ? "refl1" : "refl2"] = t.value; save(); }; });
+    const cp = $("copyBtn");
+    if (cp) cp.onclick = () => {
+      const L = ["[학교 앞 가게, 보호구역일까? · 탐구 결과]", "", "■ 나의 발견"];
+      FIND.forEach((t, k) => { if (t && DONE[k]()) L.push("- " + t.replace(/<[^>]+>/g, "")); });
+      L.push("", "■ 가게 판정");
+      SHOPS.forEach(s => L.push(`- ${s.id} ${s.name}(${s.x}, ${s.y}): 출입문 ${fmt(dGate(s) * 10, 0)}m, 담장 ${fmt(dLine(s) * 10, 0)}m → ${ZN[zoneOf(s)]}`));
+      L.push("", `■ 처음 예상(C PC방): ${ZN[S.pred] || "—"} → 실제: 상대보호구역`, "", "■ 정리", S.refl1.trim() || "(미작성)", "", "■ 만약 걸어서 재면?", S.refl2.trim() || "(미작성)");
+      const txt = L.join("\n");
+      const fallback = () => { const ta = document.createElement("textarea"); ta.value = txt; ta.style.cssText = "position:fixed;opacity:0"; document.body.appendChild(ta); ta.select(); let ok = false; try { ok = document.execCommand("copy"); } catch (e) {} ta.remove(); toast(ok ? "복사했어요" : "복사하지 못했어요"); };
+      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(txt).then(() => toast("탐구 결과를 복사했어요"), fallback); else fallback();
+    };
+  }
+
+  const HINTS = [
+    "격자 1칸 = 10m. 출입문 G(20, 15), 학교 담장은 직선 3x + 4y − 120 = 0 위에 있습니다.",
+    "격자점을 눌러 점을 찍으세요. 빨간 점 = 정확히 50m",
+    "점 P를 끌어 움직여 보세요.",
+    "담장 위의 점 Q를 끌어 담장을 따라 움직여 보세요.",
+    "점 P를 끌어 움직여 보세요. 초록 선 = 담장에 내린 수선",
+    "가게를 누르면 출입문까지(빨강)와 담장까지(초록) 거리를 보여 줍니다."
+  ];
+  function refresh() { renderSteps(); renderSide(); $("mapHint").textContent = HINTS[S.step]; draw(); }
+  new ResizeObserver(draw).observe(cv);
+  refresh();
+</script>
+<!-- 대구학습법: 이 활동에서 기르는 실천 지표 (오른쪽 위에 표시) -->
+<script src="../daegu-tags.js" data-codes="고03전이-02,고03비판-07,고01표현-06"></script>
+</body>
+</html>
