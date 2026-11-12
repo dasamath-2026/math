@@ -1,0 +1,1424 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>수학으로 묻는 지식이론</title>
+<!--
+  ============================================================
+  새 앱 기본 틀
+  1) 이 폴더(app-template)를 복사해 영어 폴더 이름으로 바꿉니다. 예) probability
+  2) 아래 "앱 제목", 상단 문구, "도구 전용" 영역만 바꿉니다.
+  3) site-config.js의 TOOLS에 등록하면 홈페이지에 카드가 생깁니다.
+  ※ Claude에게 맡길 때는 '연수가이드/02_프롬프트모음.md'의 [프롬프트 B]를 쓰세요.
+  ============================================================
+-->
+<style>
+  /* ===== 내 수학 실험실 공통 테마 =====
+     이 :root 블록과 아래 "공통 셸" 영역은 모든 도구가 동일하게 유지합니다.
+     도구별 CSS는 파일 아래쪽 "도구 전용" 영역에만 추가하세요. */
+  :root{
+    --bg:#f2f0e9;
+    --panel:#fbf9f3;
+    --panel-2:#f4f1e9;
+    --line:#d8d2c7;
+    --border-soft:#eee9df;
+    --text:#15171a;
+    --muted:#6b6f74;
+    --faint:#9a958a;
+    --accent:#ff5a30;
+    --accent-weak:rgba(255,90,48,.14);
+    --lime:#d9f24f;
+    --shadow:0 10px 28px rgba(21,23,26,.055);
+    --radius:16px;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    background:
+      linear-gradient(rgba(21,23,26,.035) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(21,23,26,.035) 1px, transparent 1px),
+      var(--bg);
+    background-size:34px 34px;
+    color:var(--text);
+    font-family:Pretendard,"Apple SD Gothic Neo","Noto Sans KR",-apple-system,BlinkMacSystemFont,sans-serif;
+    letter-spacing:-.015em;
+    min-height:100vh;
+    -webkit-font-smoothing:antialiased;
+  }
+  button,input,select{font:inherit;color:inherit}
+  .num{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+
+  .app{width:100%;max-width:1180px;margin:0 auto;padding:12px;display:flex;flex-direction:column;gap:10px}
+
+  /* ---- 공통 셸: 상단바 ---- */
+  .topbar{
+    min-height:72px;
+    display:flex;
+    gap:14px;
+    justify-content:space-between;
+    align-items:center;
+    padding:10px 14px;
+    background:rgba(242,240,233,.90);
+    border:1px solid var(--line);
+    border-radius:18px;
+    backdrop-filter:blur(14px);
+  }
+  .brand-area{display:flex;align-items:center;gap:18px;min-width:0}
+  .home-link{
+    display:flex;align-items:center;gap:10px;flex:none;
+    color:var(--text);text-decoration:none;
+    padding:7px 10px 7px 8px;border-radius:12px;
+    transition:background .18s ease;
+  }
+  .home-link:hover{background:#e7e3d9}
+  .home-arrow{
+    width:31px;height:31px;border:1px solid #c9c4b8;border-radius:50%;
+    display:grid;place-items:center;font-size:16px;line-height:1;background:#fbf9f3;
+  }
+  .brand-copy{display:block;line-height:1.15}
+  .brand-copy strong{display:block;font-size:14px;font-weight:800;letter-spacing:-.035em}
+  .brand-copy small{
+    display:block;margin-top:4px;color:#8a8d90;
+    font-family:ui-monospace,SFMono-Regular,Consolas,monospace;
+    font-size:7.5px;letter-spacing:.13em;white-space:nowrap;
+  }
+  .top-divider{width:1px;height:34px;background:#d3cec3;flex:none}
+  .title-row{display:block;min-width:0}
+  .eyebrow{
+    display:flex;align-items:center;gap:7px;margin-bottom:4px;
+    color:#7b7770;font-size:10px;font-weight:750;white-space:nowrap;
+  }
+  .eyebrow span{display:block;width:18px;height:2px;background:var(--accent)}
+  h1{
+    font-size:clamp(18px,1.25vw,24px);
+    margin:0;
+    font-weight:800;letter-spacing:-.04em;white-space:nowrap;
+  }
+  h1 em{
+    font-style:normal;font-weight:500;
+    background:linear-gradient(transparent 60%,var(--lime) 0);
+    padding:0 .04em;
+  }
+  .subtitle{margin:4px 0 0;color:#666b6f;font-size:11.5px}
+  .badge{
+    display:inline-flex;align-items:center;gap:7px;flex:none;
+    background:#15171a;color:#fff;border:0;
+    border-radius:999px;padding:8px 12px;font-weight:700;font-size:12px;white-space:nowrap;
+  }
+  .dot{width:9px;height:9px;border-radius:50%;background:#73c48f}
+
+  /* ---- 공통 셸: 패널 ----
+     기본은 "넓은 그림 영역 + 좁은 설정 영역" 2단입니다.
+     패널 수가 다르면 grid-template-columns만 바꾸고, 좁은 화면에서 1단으로
+     떨어지는 @media (max-width:900px) 규칙은 남겨 두세요. */
+  .workspace{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(300px,1fr);gap:10px}
+  .panel{
+    min-width:0;
+    display:flex;flex-direction:column;
+    background:rgba(251,249,243,.96);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    box-shadow:var(--shadow);
+    overflow:hidden;
+  }
+  .panel-head{
+    flex:0 0 auto;
+    padding:12px 14px;
+    border-bottom:1px solid var(--line);
+    background:rgba(247,244,236,.92);
+  }
+  .panel-title{
+    font-size:15px;font-weight:800;letter-spacing:-.025em;
+    position:relative;padding-left:10px;
+  }
+  .panel-title::before{
+    content:"";position:absolute;left:0;top:.15em;bottom:.15em;
+    width:3px;border-radius:3px;background:var(--accent);
+  }
+  .panel-desc{color:#74716b;font-size:11.5px;margin-top:5px;line-height:1.45}
+  .panel-body{flex:1;min-height:0;padding:14px}
+
+  /* ---- 공통 셸: 버튼 ---- */
+  .btn{
+    border:1px solid #c9c4b8;background:#fbf9f3;color:#15171a;
+    border-radius:999px;font-weight:700;font-size:12.5px;
+    padding:9px 14px;cursor:pointer;line-height:1;
+    transition:background .15s ease,border-color .15s ease,transform .15s ease;
+  }
+  .btn:hover:not(:disabled){transform:translateY(-1px);border-color:#15171a;background:#f2efe6}
+  .btn:disabled{opacity:.4;cursor:not-allowed;transform:none}
+  .btn.primary{background:#15171a;color:#fff;border-color:#15171a}
+  .btn.primary:hover:not(:disabled){background:#2b2e31}
+  .btn.danger{color:#a73b2c}
+  .btn.icon-btn{width:38px;height:38px;padding:0;border-radius:10px;font-size:18px;display:grid;place-items:center}
+
+  /* ---- 공통 셸: 그림 영역 (캔버스·SVG) ---- */
+  .chart-wrap{background:#fff;border:1px solid #e3ded4;border-radius:12px;overflow:hidden;position:relative}
+  .chart-wrap canvas,.chart-wrap svg{display:block;width:100%;height:100%}
+
+  /* ---- 공통 셸: 입력·지표·안내 (쓰지 않는 것은 지우세요) ---- */
+  .controls{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+  .control{display:flex;flex-direction:column;gap:5px}
+  .control label{font-size:11px;color:var(--muted);font-weight:800}
+  .control input{
+    width:100%;padding:9px 10px;font-weight:700;
+    border:1px solid #d3cec3;background:#fff;color:var(--text);border-radius:10px;
+  }
+  .control input:focus{outline:3px solid rgba(217,242,79,.42);border-color:#9aa64b}
+  .control input[type="range"]{
+    padding:0;height:22px;border:0;border-radius:0;background:transparent;
+    accent-color:#15171a;cursor:pointer;
+  }
+  .checkbox-control{
+    justify-content:center;min-height:58px;padding:8px 10px;
+    border:1px solid var(--line);background:var(--panel-2);border-radius:12px;
+  }
+  .checkbox-control label{display:flex;align-items:center;gap:8px;color:var(--text);cursor:pointer;font-size:11px}
+  .checkbox-control input{width:17px;height:17px;padding:0;accent-color:#15171a;cursor:pointer}
+
+  .metrics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+  .metric{background:var(--panel-2);border:1px solid #ddd7cc;border-radius:11px;padding:8px 9px;min-width:0}
+  .metric .label{color:#77736d;font-size:10px;font-weight:800;margin-bottom:3px}
+  .metric .value{
+    font-size:15px;font-weight:850;color:var(--text);
+    font-variant-numeric:tabular-nums;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  }
+
+  .formula{
+    background:#15171a;color:#f6f2e9;border:1px solid #15171a;border-radius:12px;
+    padding:9px 10px;line-height:1.55;font-size:12px;
+    font-family:ui-monospace,SFMono-Regular,Consolas,monospace;overflow:auto;
+  }
+  .note{
+    padding:10px 12px;border-radius:10px;
+    background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;
+    font-size:11px;line-height:1.5;
+  }
+  .note b{color:#7c2d12;font-weight:800}
+  .status{min-height:19px;font-size:11px;line-height:1.4;font-weight:750;color:var(--muted)}
+  .status.ok{color:#32724f}
+  .status.error{color:#b44634}
+
+  .legend{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center}
+  .legend-item{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--muted)}
+  .legend-item i{width:11px;height:11px;border-radius:3px;flex:none}
+
+  /* ---- 공통 셸: 반응형 (이 3개 블록은 그대로 유지) ----
+     주의: .topbar에 align-items:stretch를 쓰면 알약 모양 .badge가
+     줄바꿈된 제목 높이만큼 세로로 늘어나 거대한 원처럼 깨집니다. */
+  @media (max-width:1080px){
+    .brand-copy small{display:none}
+    .brand-copy strong{font-size:13px}
+    .top-divider{height:28px}
+  }
+  @media (max-width:900px){
+    .workspace{grid-template-columns:1fr}
+  }
+  @media (max-width:820px){
+    .topbar{align-items:flex-start}
+    .brand-area{align-items:flex-start}
+    .home-link{padding-left:2px}
+    .top-divider{display:none}
+    .brand-copy{display:none}
+    .title-row{display:block}
+    h1{white-space:normal}
+    .eyebrow{white-space:normal}
+    .badge{display:none}
+  }
+  @media (max-width:520px){
+    .app{padding:7px}
+    .topbar{border-radius:14px;padding:9px 10px}
+    .home-arrow{width:34px;height:34px}
+    h1{font-size:20px;line-height:1.25}
+    .subtitle{font-size:11px;white-space:normal}
+    .panel{border-radius:14px}
+    .panel-head{padding:12px}
+    .btn{min-height:40px}
+    .controls{grid-template-columns:1fr}
+  }
+
+
+  /* ===== 도구 전용 CSS는 여기부터 ===== */
+  .tabs{display:flex;gap:6px;flex-wrap:wrap}
+  .section-label{font-size:11px;color:var(--muted);font-weight:800}
+  .tab{border:1px solid #c9c4b8;background:#fbf9f3;border-radius:999px;padding:8px 14px;font-weight:800;font-size:12.5px;cursor:pointer}
+  .tab.on{background:#15171a;color:#fff;border-color:#15171a}
+  .hero{padding:16px 18px;background:rgba(251,249,243,.96);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow)}
+  .hero h2{margin:0 0 6px;font-size:20px;letter-spacing:-.04em}
+  .hero p{margin:6px 0 0;color:#4a4d52;font-size:13px;line-height:1.7;max-width:80ch}
+  .chips{display:flex;gap:6px;flex-wrap:wrap}
+  .chip{border:1px solid #c9c4b8;background:#fff;border-radius:999px;padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer}
+  .chip.on{background:#15171a;color:#fff;border-color:#15171a}
+  .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:10px}
+  .card{
+    text-align:left;border:1px solid var(--line);background:#fff;border-radius:14px;padding:13px 14px;cursor:pointer;
+    display:flex;flex-direction:column;gap:6px;transition:border-color .15s,transform .15s;
+  }
+  .card:hover{border-color:#15171a;transform:translateY(-1px)}
+  .card .no{font-family:ui-monospace,Consolas,monospace;font-size:11px;color:var(--accent);font-weight:800}
+  .card .t{font-weight:850;font-size:15px;letter-spacing:-.03em}
+  .card .kq{font-size:12px;color:#5d6166;line-height:1.55}
+  .card .meta{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:auto}
+  .pill{font-size:10.5px;font-weight:800;padding:3px 8px;border-radius:999px;background:var(--panel-2);border:1px solid #ddd7cc;color:#5d6166}
+  .pill.done{background:#e4f4ea;border-color:#b9dfc6;color:#2f6d47}
+  .pill.mid{background:#fff3df;border-color:#f3d6a6;color:#8a5a14}
+  .bridge{width:100%;border-collapse:collapse;font-size:12.5px}
+  .bridge th,.bridge td{border-bottom:1px solid var(--border-soft);padding:8px 8px;text-align:left;vertical-align:top;line-height:1.5}
+  .bridge th{font-size:11px;color:var(--muted);background:var(--panel-2)}
+  .crit{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:8px}
+  .crit div{background:var(--panel-2);border:1px solid #ddd7cc;border-radius:11px;padding:9px 10px;font-size:12px;line-height:1.5}
+  .crit b{display:block;font-size:12.5px;margin-bottom:2px}
+  .crumb{font-size:12px;color:var(--muted);display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+  .crumb button{border:0;background:none;padding:0;color:var(--accent);font-weight:800;cursor:pointer;font-size:12px}
+  .topic-head{padding:14px 16px;background:rgba(251,249,243,.96);border:1px solid var(--line);border-radius:var(--radius)}
+  .topic-head h2{margin:2px 0 8px;font-size:21px;letter-spacing:-.04em}
+  .facts{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px}
+  .fact{background:#fff;border:1px solid #e3ded4;border-radius:11px;padding:9px 11px;font-size:12.5px;line-height:1.55}
+  .fact b{display:block;font-size:11px;color:var(--muted);margin-bottom:2px}
+  .fact.kq{border-color:var(--accent);background:#fff8f5}
+  .fact.kq b{color:var(--accent)}
+  .stack{display:flex;flex-direction:column;gap:12px}
+  .lab-box{display:flex;flex-direction:column;gap:10px}
+  .ro{background:#15171a;color:#f6f2e9;border-radius:12px;padding:9px 11px;font-size:12px;line-height:1.65;
+      font-family:ui-monospace,SFMono-Regular,Consolas,monospace;overflow-x:auto}
+  .ro b{color:#d9f24f}
+  .ro .warn{color:#ffb199}
+  .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .sl{display:flex;flex-direction:column;gap:3px;min-width:150px;flex:1}
+  .sl span{display:flex;justify-content:space-between;font-size:11px;color:var(--muted);font-weight:800}
+  .sl output{font-family:ui-monospace,Consolas,monospace;color:var(--text)}
+  .sl input{accent-color:#15171a;width:100%}
+  .seg{display:inline-flex;border:1px solid #c9c4b8;border-radius:999px;overflow:hidden;background:#fbf9f3;flex-wrap:wrap}
+  .seg button{border:0;background:transparent;padding:7px 11px;font-size:12px;font-weight:700;cursor:pointer}
+  .seg button.on{background:#15171a;color:#fff}
+  .ck{display:flex;gap:6px;align-items:center;font-size:12px;font-weight:700;cursor:pointer}
+  .ck input{accent-color:#15171a;width:16px;height:16px}
+  .cvw{background:#fff;border:1px solid #e3ded4;border-radius:12px;overflow:hidden;position:relative}
+  .cvw canvas{display:block;width:100%;height:100%;touch-action:none}
+  .tbl-wrap{max-height:250px;overflow:auto;border:1px solid var(--line);border-radius:10px;background:#fff}
+  .tbl{width:100%;border-collapse:collapse;font-size:12px}
+  .tbl th,.tbl td{padding:5px 8px;border-bottom:1px solid var(--border-soft);text-align:right;font-variant-numeric:tabular-nums}
+  .tbl th{position:sticky;top:0;background:var(--panel-2);color:var(--muted);font-size:11px}
+  .tbl td:first-child,.tbl th:first-child{text-align:center}
+  .tbl tr.hit td{background:var(--accent-weak);font-weight:800}
+  .tbl tr.dim td{color:#a8a39a}
+  .nest{border:1.5px solid #d3cec3;border-radius:12px;padding:20px 8px 8px;position:relative;background:#fff}
+  .nest>.lb{position:absolute;left:10px;top:3px;font-size:11px;font-weight:800;color:#8a857b}
+  .nest.need{border-color:var(--accent);background:#fff6f2}
+  .nest.need>.lb{color:var(--accent)}
+  .nest.out{background:#f6f4ef}
+  .doors{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+  .door{width:84px;height:116px;border-radius:10px 10px 4px 4px;border:2px solid #15171a;background:#f3d6a6;
+        font-weight:900;font-size:20px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px}
+  .door small{font-size:11px;font-weight:800}
+  .door.pick{outline:4px solid var(--accent);outline-offset:2px}
+  .door.open{background:#fff;cursor:default}
+  .bars{display:flex;flex-direction:column;gap:6px}
+  .bar{display:grid;grid-template-columns:120px 1fr 120px;gap:8px;align-items:center;font-size:12px}
+  .bar .tr{height:16px;background:var(--panel-2);border:1px solid #ddd7cc;border-radius:6px;position:relative;overflow:hidden}
+  .bar .fl{position:absolute;inset:0 auto 0 0;background:#15171a}
+  .bar .th{position:absolute;top:-2px;bottom:-2px;width:2px;background:var(--accent)}
+  .bar .v{font-family:ui-monospace,Consolas,monospace;text-align:right}
+  .refl label{display:block;font-size:12px;font-weight:800;margin:10px 0 4px}
+  .refl label.qopt{display:flex;margin:6px 0 0;font-weight:500;font-size:12.5px}
+  .refl label.ck{display:flex;margin:0;font-weight:700;align-items:flex-start;line-height:1.5}
+  .refl label.ck input{margin-top:2px;flex:none}
+  .refl textarea{width:100%;min-height:58px;padding:9px 10px;border:1px solid #d3cec3;border-radius:10px;background:#fff;
+                 font:inherit;font-size:13px;line-height:1.55;resize:vertical}
+  .refl textarea:focus{outline:3px solid rgba(217,242,79,.42);border-color:#9aa64b}
+  .qopt{display:flex;gap:8px;align-items:flex-start;padding:8px 10px;border:1px solid var(--line);border-radius:10px;background:#fff;
+        font-size:12.5px;line-height:1.5;cursor:pointer;margin-top:6px}
+  .qopt input{margin-top:3px;accent-color:#15171a}
+  .qopt.on{border-color:#15171a;background:#fbf9f3}
+  .qopt .src{display:block;font-size:10.5px;color:var(--muted);font-weight:700}
+  .sentence{background:#fff;border:1px dashed #c9c4b8;border-radius:12px;padding:11px 12px;font-size:13px;line-height:1.75}
+  .sentence .blank{color:#b2ada2}
+  .sentence mark{background:linear-gradient(transparent 55%,var(--lime) 0);color:inherit}
+  .loglist{margin:0;padding-left:1.2em;font-size:12px;line-height:1.6}
+  .loglist li{margin-bottom:4px}
+  .loglist button{border:0;background:none;color:#b44634;cursor:pointer;font-size:12px;margin-left:4px}
+  .bank-group h3{font-size:15px;margin:4px 0 6px}
+  .bank-unit{font-size:12px;font-weight:850;color:var(--accent);margin:10px 0 4px}
+  .bank-q{background:#fff;border:1px solid var(--line);border-radius:10px;padding:8px 10px;font-size:12.5px;line-height:1.6;margin-bottom:6px}
+  .bank-q .k{font-size:10.5px;font-weight:850;color:var(--muted);margin-right:6px}
+  .bank-q .k.im{color:#2f6fd6}
+  .bank-q .links{margin-top:4px;display:flex;gap:6px;flex-wrap:wrap}
+  .bank-q .links button{border:1px solid #c9c4b8;background:#fbf9f3;border-radius:999px;font-size:11px;font-weight:700;padding:3px 9px;cursor:pointer}
+  .search{width:100%;padding:10px 12px;border:1px solid #d3cec3;border-radius:10px;background:#fff;font:inherit;font-size:13px}
+  .report{white-space:pre-wrap;font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:12px;line-height:1.7;
+          background:#fff;border:1px solid var(--line);border-radius:12px;padding:12px;max-height:520px;overflow:auto}
+  .name-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .name-row input{padding:9px 10px;border:1px solid #d3cec3;border-radius:10px;background:#fff;font:inherit;font-weight:700;min-width:200px}
+  .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#15171a;color:#fff;padding:10px 16px;border-radius:999px;
+         font-size:13px;font-weight:700;z-index:50;box-shadow:var(--shadow)}
+  .pager{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}
+  .disc{background:#fff7ed;border:1px solid #fed7aa;border-radius:10px;padding:9px 11px;font-size:12.5px;line-height:1.6;color:#7c2d12}
+  @media (max-width:520px){
+    .bar{grid-template-columns:86px 1fr 92px}
+    .door{width:72px;height:100px}
+    .tabs .tab{padding:8px 11px}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="topbar">
+    <div class="brand-area">
+      <!-- 홈으로 돌아가는 링크: ../#tools 를 바꾸지 마세요 -->
+      <a class="home-link" href="../#tools" aria-label="메인으로">
+        <span class="home-arrow">←</span>
+        <span class="brand-copy">
+          <strong data-site="name">내 수학 실험실</strong>
+          <small data-site="englishName">MATHEMATICS LABORATORY</small>
+        </span>
+      </a>
+      <span class="top-divider" aria-hidden="true"></span>
+      <div class="title-row">
+        <div class="eyebrow"><span></span>IB AA · 지식이론(TOK)</div>
+        <h1>수학으로 묻는 <em>지식이론</em></h1>
+        <p class="subtitle">수학 활동의 결과를 어떤 근거로 ‘지식’이라고 인정할 수 있는지 실험하고 성찰합니다.</p>
+      </div>
+    </div>
+    <div class="badge"><span class="dot"></span><span id="stateBadge">성찰 0 / 15</span></div>
+  </div>
+  <nav class="tabs" id="tabs" aria-label="화면 선택"></nav>
+  <main id="view" class="stack"></main>
+</div>
+
+<!-- 홈페이지 이름을 site-config.js에서 가져와 상단에 표시합니다 -->
+<script src="../site-config.js"></script>
+<script>
+  if (typeof SITE !== "undefined") {
+    document.querySelectorAll("[data-site]").forEach(el => {
+      if (SITE[el.dataset.site]) el.textContent = SITE[el.dataset.site];
+    });
+  }
+</script>
+<script>
+// ===== 도구 전용 JavaScript는 여기부터 =====
+"use strict";
+/* ───────── 자료 ─────────
+   주제 15개: 「수학과 관련한 TOK 주제 정리」(교사 정리 자료)
+   질문 은행: 「수학: 분석과 접근 가이드(지식이론)」                         */
+const AREAS = ["수와 대수", "함수", "기하와 삼각법", "통계와 확률", "미적분"];
+
+const TOPICS = [
+  { id:"01", title:"수학은 발견인가, 발명인가?", area:"수와 대수",
+    kq:"수학적 대상은 인간과 독립적으로 존재하는가, 인간이 만들어 낸 것인가?",
+    math:"수 체계, 함수, 기하",
+    act:"자연수·음수·복소수가 등장하는 이유를 비교함.",
+    point:"기호와 정의를 만드는 일과 그로부터 성질을 발견하는 일을 구분함.",
+    mq:"방정식의 해가 ‘없다’고 할 때, 새로운 수를 만들어 해를 ‘있게’ 해도 되는가?",
+    lab:"numsys", rel:["e","cxapp","leib","unproved"] },
+  { id:"02", title:"수학적 확실성", area:"기하와 삼각법",
+    kq:"수학적 결론의 확실성은 무엇에 의존하는가?",
+    math:"명제, 증명, 기하",
+    act:"삼각형의 내각의 합을 평면과 구면에서 비교함.",
+    point:"공리와 적용 조건을 함께 확인함. 구면에서는 대원 호로 이루어진 삼각형을 다룸.",
+    mq:"삼각형의 내각의 합은 언제나 180°인가?",
+    lab:"sphere", rel:["a180","cert","axiom"] },
+  { id:"03", title:"증거와 증명의 차이", area:"수와 대수",
+    kq:"많은 사례에서 성립하는 것이 일반적인 참을 보장하는가?",
+    math:"다항식, 수열, 정수",
+    act:"n²+n+41의 값을 확인하고 n=40을 검토함.",
+    point:"사례는 추측을 뒷받침하지만 일반 명제의 증명을 대신하지 못함.",
+    mq:"n² + n + 41은 모든 자연수 n에 대해 소수인가?",
+    disc:"확인한 사례가 늘어나면 확신은 커질 수 있는데, 왜 증명은 되지 않는가?",
+    lab:"primes", rel:["induct","unproved","pattern","sci"] },
+  { id:"04", title:"공리와 가정", area:"기하와 삼각법",
+    kq:"증명 없이 받아들이는 출발점이 있어도 신뢰할 만한 지식을 만들 수 있는가?",
+    math:"집합과 명제, 기하",
+    act:"평행선에 관한 가정을 바꿀 때 달라지는 결론을 탐구함.",
+    point:"가정의 명시, 체계의 일관성, 현실에 대한 적용을 구분함.",
+    mq:"‘평행선은 만나지 않는다’는 가정이 없는 세계에서 삼각형은 어떻게 달라지는가?",
+    lab:"sphere", labOpt:{axiom:true}, rel:["axiom","a180","found"] },
+  { id:"05", title:"직관과 논리", area:"통계와 확률",
+    kq:"직관과 논리적 결과가 충돌할 때 무엇을 믿어야 하는가?",
+    math:"확률, 무한, 극한",
+    act:"몬티 홀 문제를 직관으로 판단한 뒤 조건부확률과 모의실험으로 확인함.",
+    point:"직관은 탐구의 출발점이며 검증이 필요함. 진행자의 정보와 문을 여는 규칙을 명시함.",
+    mq:"문 하나를 고른 뒤 진행자가 염소가 있는 문을 열어 주면, 선택을 바꾸는 것이 유리한가?",
+    lab:"monty", rel:["koch","integ","emo","limit"] },
+  { id:"06", title:"수학적 표현과 이해", area:"함수",
+    kq:"같은 지식도 표현 방식에 따라 다르게 이해되는가?",
+    math:"함수와 그래프, 수열",
+    act:"같은 함수를 식·표·그래프로 제시하고 쉽게 발견되는 성질을 비교함.",
+    point:"표현은 특정 관계를 드러내는 동시에 다른 정보를 덜 보이게 함.",
+    mq:"f(x) = x³ − 2x의 극대는 어디인가? 식·표·그래프 중 무엇으로 보아야 하는가?",
+    lab:"repr", rel:["graph","desc","dim3","interp"] },
+  { id:"07", title:"수학과 언어", area:"통계와 확률",
+    kq:"수학 기호는 의미를 명확하게 전달하는가?",
+    math:"논리 기호, 함수, 확률",
+    act:"일상어와 수학의 “또는”, P(A|B)와 P(B|A)를 비교함.",
+    point:"기호의 정확성은 정의와 사용 맥락을 공유할 때 확보됨.",
+    mq:"검사가 ‘99% 정확하다’면, 양성이 나온 사람이 실제로 병에 걸렸을 확률도 99%인가?",
+    lab:"cond", rel:["name","cxlang","lang","concept"] },
+  { id:"08", title:"모델과 현실", area:"함수",
+    kq:"현실을 단순화한 수학적 모델로 어디까지 알 수 있는가?",
+    math:"지수·로그함수, 로지스틱 모델",
+    act:"같은 인구 자료에 지수 모델과 로지스틱 모델을 적용함.",
+    point:"자료 적합도, 가정의 타당성, 예측 범위를 함께 평가함.",
+    mq:"어느 모델의 오차가 더 작은가? 오차가 작은 모델이 더 좋은 모델인가?",
+    disc:"같은 자료를 설명하는 모델들이 서로 다른 미래를 제시할 때, 어떤 근거로 선택해야 하는가?",
+    lab:"model", labOpt:{k:15}, rel:["model","assume","choose","normal"] },
+  { id:"09", title:"예측과 불확실성", area:"통계와 확률",
+    kq:"과거 자료를 잘 설명하는 모델은 미래도 잘 예측하는가?",
+    math:"회귀, 통계, 함수",
+    act:"앞 시기의 자료로 모델을 만들고 이후 자료에 대한 예측을 검토함.",
+    point:"관측 범위 안의 설명과 범위 밖의 예측은 근거의 강도가 다름.",
+    mq:"앞의 자료 몇 개만으로 만든 모델은 뒤의 자료를 얼마나 맞힐까?",
+    lab:"model", labOpt:{k:7}, rel:["future","corr","moon"] },
+  { id:"10", title:"통계와 객관성", area:"통계와 확률",
+    kq:"수치로 제시된 정보는 어느 정도 객관적인가?",
+    math:"평균·중앙값, 표본추출, 산포",
+    act:"같은 성적 자료를 평균·중앙값·분포로 설명하고 인상을 비교함.",
+    point:"자료 수집과 지표 선택에는 판단이 개입함.",
+    mq:"‘평균 월급’은 이 회사 직원의 형편을 잘 보여 주는가?",
+    disc:"정확하게 계산된 수치도 선택적으로 제시되면 판단을 왜곡할 수 있는가?",
+    lab:"stats", rel:["mislead","data","alt"] },
+  { id:"11", title:"기술과 수학적 지식", area:"미적분",
+    kq:"계산 도구의 결과를 신뢰하려면 무엇을 확인해야 하는가?",
+    math:"방정식, 그래프, 미적분",
+    act:"그래프 창의 범위를 바꾸어 교점이 보이는 방식과 실제 해를 비교함.",
+    point:"도구의 출력, 수학적 정당화, 결과의 이해를 구분함.",
+    mq:"그래프에서 보이는 것을 어느 정도까지 신뢰할 수 있는가? y = eˣ와 y = x¹⁰은 몇 번 만나는가?",
+    lab:"tech", rel:["fin","tech","trade"] },
+  { id:"12", title:"증명과 이해", area:"수와 대수",
+    kq:"참임을 확인하는 것과 왜 참인지 이해하는 것은 같은가?",
+    math:"대수·기하 증명, 미분",
+    act:"같은 정리를 대수적 증명과 시각적 증명으로 설명함.",
+    point:"증명의 타당성과 설명력을 별도로 평가함.",
+    mq:"1 + 3 + 5 + … + (2n − 1) = n²은 왜 성립하는가?",
+    lab:"odd", rel:["under","explain","induct"] },
+  { id:"13", title:"아름다움과 지식의 가치", area:"수와 대수",
+    kq:"간결하고 아름다운 설명은 수학적 지식의 가치를 높이는가?",
+    math:"수열, 항등식, 기하",
+    act:"1+2+…+n을 직접 합산하는 방법과 짝짓는 방법으로 비교함.",
+    point:"간결함은 이해와 일반화에 기여하지만 참의 근거는 논증임.",
+    mq:"1 + 2 + … + 100을 가장 간결하게 구하는 방법은 무엇이며, 그 방법은 왜 믿을 만한가?",
+    lab:"gauss", rel:["euler","trade","pascal"] },
+  { id:"14", title:"문화와 수학", area:"수와 대수",
+    kq:"수학적 지식의 보편성과 문화적 배경은 어떻게 공존하는가?",
+    math:"수 표현, 진법, 기하",
+    act:"서로 다른 수 표기법과 계산 방법을 비교함.",
+    point:"결과의 타당성과 지식을 표현·전달하는 방식의 차이를 구분함.",
+    mq:"같은 수를 10진법, 60진법, 로마 숫자로 쓰면 무엇이 같고 무엇이 달라지는가?",
+    lab:"numerals", rel:["notation","value","meso","cultind","rad"] },
+  { id:"15", title:"수학 활용의 윤리", area:"통계와 확률",
+    kq:"수학적 기준으로 내린 결정은 공정하다고 할 수 있는가?",
+    math:"통계, 가중평균, 최적화",
+    act:"성적 산출의 가중치를 바꾸고 학생 순위의 변화를 분석함.",
+    point:"계산의 정확성, 기준 선택의 정당성, 결과에 대한 책임을 구분함.",
+    mq:"무엇을 최적화할지 정하는 데 누구의 가치 판단이 개입하는가? 가중치를 바꾸면 1등이 바뀌는가?",
+    lab:"weights", rel:["gamble","fair","veceth","pytheth"] }
+];
+
+/* 수학 질문 → TOK 지식 질문 (교사 정리 자료 3절) */
+const BRIDGE = [
+  ["이 명제는 참인가?", "어떤 근거가 있어야 이 명제를 참이라고 인정할 수 있는가?"],
+  ["이 함수의 그래프는 어떤 모양인가?", "그래프에서 보이는 것을 어느 정도까지 신뢰할 수 있는가?"],
+  ["어느 모델의 오차가 더 작은가?", "오차가 작은 모델을 더 좋은 모델이라고 판단해도 되는가?"],
+  ["상관계수는 얼마인가?", "수학적 관계가 현실에 대한 설명을 어디까지 뒷받침하는가?"],
+  ["최적해는 무엇인가?", "무엇을 최적화할지 정하는 데 누구의 가치 판단이 개입하는가?"]
+];
+
+const CRITERIA = [
+  ["수학 사례의 정확성", "실험·계산 결과를 정확하게 제시했다."],
+  ["근거의 타당성", "판단을 바꾼 근거나 반례가 결론을 실제로 뒷받침한다."],
+  ["다른 관점의 검토", "나와 다른 입장이나 다른 지식 영역의 관점을 검토했다."],
+  ["결론의 적용 조건", "어떤 조건에서 믿을 수 있고, 어디까지는 확대할 수 없는지 밝혔다."]
+];
+
+/* 질문 은행: 「수학: 분석과 접근 가이드(지식이론)」 — k: TOK(지식이론), IM(국제적 소양), CTX(다른 맥락) */
+const BANK = [
+  { area:"수와 대수", unit:"수와 표기", qs:[
+    ["name","TOK","우리가 사물에게 부여한 명칭이 우리가 그것을 어떻게 이해하는지에 영향을 미칩니까? 예를 들면 어느 큰 숫자에 구골이나 구골플렉스라는 이름이 붙는다는 사실은 다른 숫자가 해당 형식으로 표현될 때 어떤 영향을 미칩니까?"],
+    ["pattern","TOK","모든 지식은 패턴의 식별 및 사용과 관련이 있습니까? 피보나치(Fibonacci) 수 및 황금 비율과의 관계에 대하여 생각합니다."]]},
+  { area:"수와 대수", unit:"등비수열과 급수", qs:[
+    ["koch","TOK","어떤 결론이 우리의 직관과 대립되는 것으로 사료될 때 수학자는 이를 어떻게 받아들일까요? 예를 들어, 유한한 영역의 둘레의 길이가 무한할 수 있는지를 고려합니다."],
+    ["fin","TOK","기술의 발전이 수학의 본질 및 실행에 어떤 영향을 주었습니까? 금융 패키지의 사용을 한 예로 고려해 보세요."]]},
+  { area:"수와 대수", unit:"지수와 로그", qs:[
+    ["e","TOK","수학은 발명되었습니까, 아니면 발견되었습니까? 예를 들어, 숫자 e 또는 로그가 인간이 정의하기 전에 이미 존재하였는지 고려합니다."],
+    ["sci","TOK","수학적 추론은 과학적 추론 혹은 다른 지식 영역에서의 추론과 다른가요?"],
+    ["logdev","TOK","로그의 발달과 같은 중대한 발전은 수학자들이 세계와 수학의 본질을 이해하는 방식을 어떻게 변화시켰을까요?"],
+    ["infinity","TOK","무한대와 같은 경험할 수 없는 것들에 대해 아는 것이 가능할까요?"]]},
+  { area:"수와 대수", unit:"순열과 조합", qs:[
+    ["pascal","TOK","저명한 수학자들은 어떻게 지식의 영역으로서 수학을 발전시켰습니까? 파스칼 및 ‘파스칼의 삼각형’을 생각해 봅시다."],
+    ["under","TOK","수학에서 이해란 무엇입니까? 단지 정답을 얻는 것 이상일까요?"]]},
+  { area:"수와 대수", unit:"복소수", qs:[
+    ["cxlang","TOK","언어는 지식의 형성에 어떤 역할을 합니까? 예를 들어 ‘상상’과 ‘복합성’이라는 단어가 만약 다른 이름을 가졌다면 그 개념이 더 어려워질까요?"],
+    ["euler","TOK","e^(iπ) + 1 = 0이 아름답다고 말할 수 있는 이유는 무엇일까요? 수학의 아름답고 간결한 점은 무엇입니까? 창의적인 점은 무엇입니까?"],
+    ["all","TOK","수학에서 중요한 의의를 갖는 것은 모두 다 알고 있다라는 상태에 도달하는 것이 가능할까요?"],
+    ["cxapp","TOK","복소수의 응용이 알려지기 이전에 복소수가 만들어졌다는 것을 생각해 보세요."]]},
+  { area:"수와 대수", unit:"수학적 귀납법", qs:[
+    ["induct","TOK","수학적 증명의 타당성을 결정하기 위한 수학적 공동체의 역할은 무엇입니까? 증명은 우리에게 완벽하게 확실한 지식을 제공합니까? 과학의 귀납법과 수학의 귀납법에 의한 증명의 차이점은 무엇입니까?"]]},
+  { area:"수와 대수", unit:"연립방정식", qs:[
+    ["higher","TOK","수학, 감각, 인지 및 이성: 만약 우리가 더 높은 차원에서 해를 찾을 수 있다면, 이러한 공간이 우리의 감각적 인지를 넘어 존재한다는 증거가 될 수 있을까요?"]]},
+  { area:"함수", unit:"직선의 방정식", qs:[
+    ["desc","TOK","르네 데카르트(René Descartes)는 기하학적 문제는 대수 방정식으로 해결이 가능하고 반대도 가능하다는 것을 보여 주었습니다. 이는 수학적 표현 및 지식과 관련하여 우리에게 무엇을 시사할까요?"]]},
+  { area:"함수", unit:"함수", qs:[
+    ["lang","TOK","수학 또는 논리학이 언어의 한 종류로 분류되어야 한다고 생각합니까?"],
+    ["graph","TOK","함수의 그래프를 공부하는 것은 함수를 대수적으로 공부하는 것만큼 높은 수준의 수학적 역량을 요구할까요? 서로 다른 다양한 기호적 표현으로 하나의 수학적 대상을 표현하는 것에는 어떠한 장단점이 있을까요?"],
+    ["differ","TOK","다른 영역의 지식과 수학 사이에 근본적인 차이가 있습니까? 그렇다고 생각한다면, 방법론의 차이 이외에 다른 차이가 있습니까?"],
+    ["found","TOK","수학적 지식을 쌓는 토대의 주요 개념이 무엇입니까?"],
+    ["change","TOK","수학적 지식이 세대에 따라 변한다는 사실을 받아들이는 것은 무엇을 의미할까요?"],
+    ["model","TOK","수학에서 ‘모델링’의 역할은 무엇입니까? 지식의 영역에서 모델링이 차지하는 역할과 수학에서 모델링이 차지하는 역할에 다른 점이 있습니까?"],
+    ["assume","TOK","수학자들은 실생활에 수학을 적용할 때 어떤 가정을 합니까?"],
+    ["imfn","IM","함수 표기법은 17세기와 18세기의 다양한 분야의 많은 수학자들에 의하여 발전했습니다. 오늘날 우리가 사용하는 표기법은 어떻게 국제적으로 받아들여졌을까요?"],
+    ["notation","TOK","표기법의 체계나 단위계가 확립되는 배경에 문화적 요소와 역사적 요소가 있다면, 수학을 문화로부터 독립된 존재로 볼 수는 없지 않을까요?"],
+    ["value","TOK","문화마다 수학에 부여하는 가치에 차이가 있습니까? 혹은 문화가 중시하는 지식의 영역에 따라 가치를 상대적으로 부여합니까?"],
+    ["axiom","TOK","공리 체계란 무엇일까요? 공리란 정말 모두에게 자명한 것일까요?"]]},
+  { area:"함수", unit:"다항함수", qs:[
+    ["fact","TOK","어떤 지식 분야는 사실을 제공하고 어떤 지식 분야는 해석을 알려준다는 것은 지나치게 단순화한 생각일까요?"]]},
+  { area:"기하와 삼각법", unit:"사인·코사인 법칙", qs:[
+    ["impyth","IM","고대 중국과 인도에서 피타고라스의 정리(Pythagoras' theorem)를 표현한 도표. 인도의 수학 문헌에는 삼각법에 관련된 초기의 기록이 남아 있습니다. 뉴턴의 만유인력의 법칙을 두고 영국과 프랑스 간의 논란을 종식하기 위해 삼각측량을 사용하여 지구 표면의 곡률을 구했습니다."],
+    ["pytheth","TOK","자신만의 발견이 아닐지도 모르는 이론에 자기 이름을 부여한 피타고라스(Pythagoras)의 행동은 윤리적이라고 할 수 있을까요? 어떤 기준을 가지고 이와 같은 문제를 판단할 수 있을까요?"],
+    ["a180","TOK","만약 삼각형의 내각의 합이 180°라면, 혹은 그보다 작거나 크다면, 이는 수학적 지식의 본질에서 무엇을 의미할까요?"]]},
+  { area:"기하와 삼각법", unit:"호도법", qs:[
+    ["impi","IM","π를 소수점 10자리까지 계산한 세키 다카카즈(Seki Takakazu); 히파르코스(Hipparchus), 메넬라오스(Menelaus), 프톨레마이오스(Ptolemy); 한 바퀴를 왜 360도로 표현할까요? 바빌로니아 수학과의 연결."],
+    ["rad","TOK","라디안(호도법) 또는 각도법 중 어떤 것이 더 좋은 측정법일까요? 어떤 기준을 가지고 이와 같은 문제를 판단할 수 있을까요? 또는 해야 할까요?"],
+    ["trigcult","TOK","삼각법은 융성한 문명과 문화 속에서 발전했습니다. 수학적 지식은 어느 정도까지 특정 전통이나 문화에 내포되어 있을까요? 수학의 역사 속 주요 사건들이 어떻게 현재의 형태와 방법을 형성했을까요?"],
+    ["music","TOK","음악은 수학을 통해 표현될 수 있습니다. 이는 음악과 수학의 관계에 대해 무엇을 시사할까요?"],
+    ["meso","IM","메소포타미아 수학에서 각도의 기원 및 시간에서 분과 초를 사용하는 이유, 사인이라는 단어의 기원."],
+    ["concept","TOK","개념 및 사실 간의 관계는 무엇인가요? 우리가 사용하는 개념은 우리가 내린 결론 형성에 어느 정도까지 영향을 미칩니까?"]]},
+  { area:"기하와 삼각법", unit:"삼각함수", qs:[
+    ["infsol","TOK","수학과 지식의 주장: 어떻게 방정식에 무한 개의 이산 해가 있을 수 있을까요? 이것이 수학적 지식의 본질 및 다른 학문적 지식과의 비교에 대해 시사하는 바는 무엇일까요?"]]},
+  { area:"기하와 삼각법", unit:"벡터", qs:[
+    ["veceth","TOK","위치를 특정하는 등의 문제에서 벡터를 사용하는 경우가 있습니다. 조난 선원을 구조하는 경우나 레이저 유도 폭탄으로 건물을 파괴하는 것이 그러한 예에 해당됩니다. 지식의 소유는 어느 정도까지 윤리적 의무를 갖게 할까요?"],
+    ["dot","TOK","수학의 본질: 내적은 왜 그렇게 정의되었는가?"],
+    ["gps","CTX","선형운동을 3차원에서 모델링, GPS와 같은 항법 장치."]]},
+  { area:"기하와 삼각법", unit:"직선의 벡터 방정식", qs:[
+    ["interp","TOK","왜 한 가지 형태의 해석이 다른 형태보다 우수하다고 주장할 수 있을까요? 그러한 주장을 할 때 수학자는 어떤 기준을 사용해야 할까요?"],
+    ["cert","TOK","수학으로 어느 정도까지 확실성을 얻을 수 있을까요? 다른 지식의 영역에서 확실성을 얻을 수 있을까요? 이것이 과연 바람직한 것일까요?"],
+    ["dim3","TOK","수학과 지식인: 삼차원 물체의 기호적 표현이 시각적 표현보다 이해하기 쉬운 것은 왜일까요? 이를 통해 다른 차원의 수학적 지식에 대해 알 수 있는 것은 무엇일까요?"]]},
+  { area:"통계와 확률", unit:"통계와 확률", qs:[
+    ["mislead","TOK","왜 수학과 통계학은 때때로 별개의 과목으로 취급되었습니까? 얼마나 쉽게 통계에 의해 오도될 수 있습니까? 다른 사람들을 오도하기 위해 의도적으로 통계를 사용하는 것이 정당합니까?"],
+    ["data","TOK","정보와 데이터의 차이점은 무엇입니까? 지식의 영역이 달라도 ‘데이터’란 같은 의미를 유지합니까?"],
+    ["alt","TOK","수학에서 대안이 될 수 있으며, 똑같이 참인 공식을 만들 수 있을까요? 이것이 수학의 진실에 대해 말해 주는 것은 무엇일까요? 통계의 사용은 쉽게 측정할 수 없는 속성보다 쉽게 측정할 수 있는 속성을 지나치게 강조하게 될까요?"],
+    ["corr","TOK","상관관계와 인과관계: 상관관계만을 관찰할 수 있다고 한다면, 인과관계에 대한 지식을 가질 수 있을까요? 실제 현상을 설명할 때, 수학적 모델의 신뢰성과 타당성에 영향을 미치는 요인은 무엇입니까?"],
+    ["emo","TOK","이론적 확률과 실험적 확률은 어느 정도까지 연관되어 있습니까? 예를 들어 사업, 의학 및 여행 안전 등과 같은 위험 인식에서 감정의 역할은 무엇입니까?"],
+    ["gamble","TOK","도박에 관해서 확률을 계산하는 것을 윤리적인 수학 응용 방법으로 간주할 수 있습니까? 수학자가 그 연구의 비윤리적인 적용에 대해 책임을 져야 할까요?"],
+    ["fair","TOK","‘공정한’ 게임이란 무슨 뜻일까요? 도박이 이윤을 내야 하는 것이 공정한가요?"],
+    ["choose","TOK","다양한 모델링 방법 중 하나를 선택할 때 어떤 기준으로 선택해야 합니까?"],
+    ["normal","TOK","정규 분포와 같은 수학적 모델을 어느 정도 신뢰할 수 있습니까? 모델에 무엇을 포함해야 하는지, 무엇을 제외해야 하는지 어떻게 알 수 있습니까?"]]},
+  { area:"통계와 확률", unit:"회귀방정식", qs:[
+    ["future","TOK","미래의 지식을 미리 아는 것이 가능할까요?"],
+    ["border","TOK","확률론처럼 학문의 경계를 넘어 현실의 여러 상황에 응용되는 예시를 찾아볼 수 있습니다. 지식을 학문 혹은 지식의 영역과 같은 틀로 구분 짓는 것은 부자연스러운 것일까요, 아니면 유용한 것일까요?"],
+    ["apply","TOK","지식의 적용 가능성은 다양한 지식의 영역에 걸쳐서 달라집니까? 모든 지식의 가치가 적용 가능성 측면에서만 측정된다면 그 의미는 무엇일까요?"],
+    ["useful","TOK","수학은 문제를 해결하는 데 다른 지식의 영역과 비교했을 때 더 혹은 덜 유용하다고 할 수 있습니까?"]]},
+  { area:"미적분", unit:"극한과 도함수", qs:[
+    ["limit","TOK","극한이라는 지식은 어떤 가치를 줄까요? 무한소의 성질은 일상생활에 적용 가능합니까? 수학을 이해함에 있어서 직관은 타당한 수단이라고 이야기할 수 있을까요?"],
+    ["moon","TOK","추상적인 것처럼 보였던 미적분의 개념은 달에 사람을 보내는 등 인류의 위업이 되는 수학적 모델링을 가능하게 만들었습니다. 이것이 수학적 모델링과 현실 사이의 연결 고리에 대하여 알려 주는 바는 무엇일까요?"],
+    ["tech","TOK","기술은 수학적 지식을 생성하고 공유하는 방식에 어떤 영향을 주었을까요? 기술을 통해 기존 지식을 새롭고 다른 방식으로 정리할 수 있을까요? 아니면 이 지식의 나열 자체를 지식으로 받아들여야 할까요?"],
+    ["distort","TOK","왜곡 없이 세상을 설명할 수 있는 지식 영역이 존재하는 것이 가능할까요?"],
+    ["conv","TOK","수학에서 관습의 역할은 무엇입니까? 이는 다른 지식 영역의 관습의 역할과 같습니까, 아니면 다릅니까?"],
+    ["explain","TOK","수학자와 역사학자가 무언가를 설명했다고 말할 때, 그들은 ‘설명’이라는 말을 같은 의미로 사용하나요?"],
+    ["cultind","TOK","수학이란 문화로부터 독립적입니까? 문화가 사람들의 지식과 신념에 끼치는 영향에 대해 우리는 어디까지 알고 있나요?"]]},
+  { area:"미적분", unit:"적분", qs:[
+    ["integ","TOK","무한히 뻗어 있는 영역의 넓이가 유한한 값이 나오는 경우가 있습니다(예: x ≥ 1에서 y = 1/x² 아래의 넓이). 이 상황이 우리의 직관에 부합하나요? 감정과 직관이 수학에서 어떤 역할을 하나요?"]]},
+  { area:"미적분", unit:"미분", qs:[
+    ["imzero","IM","그리스인의 0에 대한 불신과 아르키메데스의 연구가 미적분학으로 이어지지 못한 이유, 서기 500~1000년 인도 수학자들의 0으로 나누기 시도 연구."],
+    ["leib","TOK","고트프리트 빌헬름 라이프니츠와 아이작 뉴턴이 비슷한 시기에 미적분을 발견했다는 사실이 구성주의자들의 주장에 비해 플라톤 학파의 주장을 더 뒷받침합니까?"],
+    ["eulcau","TOK","오일러(Leonhard Euler)는 코시(Augustin Louis Cauchy)와 같은 수학자들이 미분의 기초를 탄탄히 다지기 이전부터 중대한 수학적 발전을 이룰 수 있었습니다. 하지만 어떤 발견은 코시의 업적이 있었기에 가능했습니다. 이는 수학이 진보하고 발전하는 방식에 대해 무엇을 시사합니까? 다른 영역의 지식이 발전해 가는 방식과는 어떤 점에서 같고, 어떤 점에서 다를까요?"],
+    ["unproved","TOK","증명되기 전의 수학적 명제도 참이라고 할 수 있을까요?"],
+    ["personal","TOK","수학 지식의 형성에 개인적인 경험이 영향을 끼칠까요? 수학에서의 개인적인 경험은 다른 지식 영역과 비교하여 다른 영향을 끼칠까요?"]]},
+  { area:"미적분", unit:"미분방정식·매클로린 급수", qs:[
+    ["kerala","IM","부르바키 학파(Bourbaki School)와 케랄라 학파(Kerala School)의 비교."],
+    ["trade","TOK","정확한 것과 단순한 것 사이에는 항상 대가가 있나요?"]]}
+];
+const BANK_BY_ID = {};
+BANK.forEach(g => g.qs.forEach(([id, k, q]) => { BANK_BY_ID[id] = { id, k, q, unit: g.unit, area: g.area }; }));
+
+/* ───────── 저장 ───────── */
+const KEY = "ibaa-tok.v1";
+const load = () => { try { return JSON.parse(localStorage.getItem(KEY)) || null; } catch (e) { return null; } };
+let S = load() || { name: "", t: {} };
+if (!S.t) S.t = {};
+const TS = id => S.t[id] || (S.t[id] = { q: "kq", f1: "", f2: "", f3: "", f4: "", o: "", chk: [], log: [] });
+let saveT = 0;
+function save() { clearTimeout(saveT); saveT = setTimeout(() => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} }, 200); }
+
+/* ───────── 공통 도우미 ───────── */
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+function el(tag, cls, html) { const e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; }
+const fmt = (v, d = 2) => { if (!isFinite(v)) return "—"; const p = 10 ** d; let r = Math.round(v * p) / p; if (Object.is(r, -0)) r = 0; return r.toLocaleString("ko-KR", { maximumFractionDigits: d }); };
+function toast(msg) { const t = el("div", "toast", esc(msg)); t.setAttribute("role", "status"); document.body.appendChild(t); setTimeout(() => t.remove(), 1900); }
+
+function slider(host, label, min, max, step, val, show, on) {
+  const w = el("label", "sl");
+  w.innerHTML = `<span>${label}<output></output></span><input type="range" min="${min}" max="${max}" step="${step}" value="${val}">`;
+  const inp = $("input", w), out = $("output", w);
+  const up = () => { out.textContent = show(+inp.value); };
+  inp.addEventListener("input", () => { up(); on(+inp.value); });
+  up(); host.appendChild(w);
+  return { get: () => +inp.value, set: v => { inp.value = v; up(); } };
+}
+function seg(host, opts, val, on) {
+  const w = el("div", "seg"); w.setAttribute("role", "group");
+  const bs = opts.map(([k, t]) => {
+    const b = el("button", k === val ? "on" : "", t); b.type = "button";
+    b.onclick = () => { bs.forEach(x => x.classList.toggle("on", x === b)); on(k); };
+    w.appendChild(b); return b;
+  });
+  host.appendChild(w); return w;
+}
+function check(host, label, val, on) {
+  const l = el("label", "ck", `<input type="checkbox"${val ? " checked" : ""}>${label}`);
+  $("input", l).onchange = e => on(e.target.checked); host.appendChild(l); return l;
+}
+/* 캔버스: 크기가 바뀌면 다시 그림 */
+const ROBS = new ResizeObserver(es => es.forEach(e => e.target._draw && e.target._draw()));
+function canvas(host, ratio, draw) {
+  const w = el("div", "cvw"); w.style.aspectRatio = ratio;
+  const c = el("canvas"); w.appendChild(c); host.appendChild(w);
+  w._draw = () => {
+    const r = w.getBoundingClientRect(), dpr = window.devicePixelRatio || 1;
+    const W = Math.max(1, Math.round(r.width * dpr)), H = Math.max(1, Math.round(r.height * dpr));
+    if (c.width !== W || c.height !== H) { c.width = W; c.height = H; }
+    const g = c.getContext("2d"); g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, W, H);
+    draw(g, W, H, dpr);
+  };
+  ROBS.observe(w);
+  return { redraw: () => w._draw(), canvas: c };
+}
+function niceStep(range, n) { const raw = range / n, p = 10 ** Math.floor(Math.log10(raw)), m = raw / p; return (m < 1.5 ? 1 : m < 3.5 ? 2 : m < 7.5 ? 5 : 10) * p; }
+function tickLabel(v) { const a = Math.abs(v); if (a >= 1e5) return v.toExponential(0).replace("e+", "e"); if (a > 0 && a < 1e-3) return v.toExponential(0); return String(Math.round(v * 1000) / 1000); }
+/* 좌표축 그리기 → 좌표 변환 함수 반환 */
+function axes(g, W, H, dpr, o) {
+  const L = (o.padL ?? 40) * dpr, R = 10 * dpr, T = 10 * dpr, B = (o.padB ?? 24) * dpr;
+  const X = x => L + (x - o.xmin) / (o.xmax - o.xmin) * (W - L - R);
+  const Y = y => T + (o.ymax - y) / (o.ymax - o.ymin) * (H - T - B);
+  g.font = `${10 * dpr}px ui-monospace,Consolas,monospace`; g.lineWidth = dpr;
+  const sx = niceStep(o.xmax - o.xmin, Math.max(3, Math.round(W / dpr / 80)));
+  const sy = niceStep(o.ymax - o.ymin, Math.max(3, Math.round(H / dpr / 50)));
+  g.strokeStyle = "#eee9df"; g.fillStyle = "#9a958a";
+  g.textAlign = "center"; g.textBaseline = "top";
+  for (let x = Math.ceil(o.xmin / sx) * sx; x <= o.xmax + 1e-9; x += sx) {
+    g.beginPath(); g.moveTo(X(x), T); g.lineTo(X(x), H - B); g.stroke(); g.fillText(tickLabel(x), X(x), H - B + 4 * dpr);
+  }
+  g.textAlign = "right"; g.textBaseline = "middle";
+  for (let y = Math.ceil(o.ymin / sy) * sy; y <= o.ymax + 1e-9; y += sy) {
+    g.beginPath(); g.moveTo(L, Y(y)); g.lineTo(W - R, Y(y)); g.stroke(); g.fillText(tickLabel(y), L - 5 * dpr, Y(y));
+  }
+  g.strokeStyle = "#b9b3a7";
+  if (o.ymin <= 0 && o.ymax >= 0) { g.beginPath(); g.moveTo(L, Y(0)); g.lineTo(W - R, Y(0)); g.stroke(); }
+  if (o.xmin <= 0 && o.xmax >= 0) { g.beginPath(); g.moveTo(X(0), T); g.lineTo(X(0), H - B); g.stroke(); }
+  return { X, Y, L, R, T, B };
+}
+function curve(g, f, o, m, color, w, dash) {
+  g.save(); g.beginPath(); g.rect(m.L, m.T, g.canvas.width - m.L - m.R, g.canvas.height - m.T - m.B); g.clip();
+  g.strokeStyle = color; g.lineWidth = w; g.setLineDash(dash || []); g.beginPath();
+  const N = 600; let pen = false; const span = o.ymax - o.ymin;
+  for (let i = 0; i <= N; i++) {
+    const x = o.xmin + (o.xmax - o.xmin) * i / N, y = f(x);
+    if (!isFinite(y) || y > o.ymax + span * 5 || y < o.ymin - span * 5) { pen = false; continue; }
+    pen ? g.lineTo(m.X(x), m.Y(y)) : g.moveTo(m.X(x), m.Y(y)); pen = true;
+  }
+  g.stroke(); g.restore();
+}
+function dot(g, x, y, r, fill, stroke, lw) { g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); if (fill) { g.fillStyle = fill; g.fill(); } if (stroke) { g.strokeStyle = stroke; g.lineWidth = lw; g.stroke(); } }
+
+/* ───────── 실험실 ─────────
+   각 실험은 (host, api, opt)를 받아 화면을 만들고 api.readout에 ‘지금 결과’ 문장을 돌려주는 함수를 둔다. */
+const LABS = {};
+
+/* 01 수 체계 */
+LABS.numsys = (host, api) => {
+  const EQ = [
+    ["x + 5 = 8", "x = 3", 0], ["x + 5 = 2", "x = −3", 1], ["3x = 2", "x = 2/3", 2],
+    ["x² = 2", "x = ±√2", 3], ["x² = −1", "x = ±i", 4]
+  ];
+  const SETS = [["N", "자연수"], ["Z", "정수"], ["Q", "유리수"], ["R", "실수"], ["C", "복소수"]];
+  const NOTE = [
+    "물건의 개수를 세는 데서 출발한 수입니다.",
+    "7세기 인도의 브라마굽타는 0과 음수의 계산 규칙을 정리했습니다.",
+    "고대 이집트와 바빌로니아에서도 분수를 계산에 사용했습니다.",
+    "고대 그리스에서는 정사각형 대각선의 길이가 정수의 비로 나타나지 않는다는 사실이 알려졌습니다.",
+    "16세기 이탈리아의 카르다노와 봄벨리는 3차방정식을 풀며 음수의 제곱근을 계산에 썼습니다."
+  ];
+  let cur = 1;
+  const row = el("div", "row"); host.appendChild(row);
+  seg(row, EQ.map((e, i) => [i, e[0]]), cur, k => { cur = k; draw(); });
+  const box = el("div"); host.appendChild(box);
+  const ro = el("div", "ro"); host.appendChild(ro);
+  function draw() {
+    const [eq, sol, need] = EQ[cur];
+    const build = i => {
+      if (i < 0) return "";
+      const has = i >= need;
+      const lab = `${SETS[i][1]} ${SETS[i][0]}${has ? "" : " · 이 안에는 해가 없음"}`;
+      const body = i === need ? `<div style="text-align:center;font-weight:900;padding:6px 4px 2px">${esc(sol)}</div>${build(i - 1)}` : build(i - 1);
+      return `<div class="nest ${i === need ? "need" : has ? "" : "out"}"><span class="lb">${lab}</span>${body}</div>`;
+    };
+    box.innerHTML = build(SETS.length - 1);
+    ro.innerHTML = `방정식 <b>${esc(eq)}</b>의 해: ${esc(sol)}<br>해가 처음 생기는 수의 범위: <b>${SETS[need][1]}</b><br>${NOTE[need]}`;
+  }
+  draw();
+  api.readout = () => `${EQ[cur][0]}의 해(${EQ[cur][1]})는 ${SETS[EQ[cur][2]][1]}까지 수의 범위를 넓혀야 처음 생긴다.`;
+};
+
+/* 02·04 구면 삼각형 */
+LABS.sphere = (host, api, opt) => {
+  let th = 90;
+  const ctl = el("div", "row"); host.appendChild(ctl);
+  const cv = canvas(host, "4 / 3", draw);
+  slider(ctl, "꼭짓점 C의 각 θ (적도 위 두 점의 경도 차)", 1, 179, 1, th, v => v + "°", v => { th = v; cv.redraw(); up(); });
+  const ro = el("div", "ro"); host.appendChild(ro);
+  if (opt && opt.axiom) host.appendChild(el("div", "note",
+    "<b>평행선 공리 바꾸기</b> 평면(유클리드 기하)에서는 ‘직선 밖의 한 점을 지나 그 직선과 만나지 않는 직선이 꼭 하나 있다’를 가정합니다. 구면에서 ‘직선’ 역할을 하는 대원(구의 중심을 지나는 원)은 어느 두 개를 골라도 반드시 만납니다. 즉 평행선이 없습니다. 이 가정 하나가 바뀌자 삼각형의 내각의 합에 대한 결론도 바뀝니다."));
+  function P(lat, lon, mid) {
+    const t = 0.38, la = lat * Math.PI / 180, lo = (lon - mid) * Math.PI / 180;
+    const x = Math.cos(la) * Math.sin(lo), y = Math.sin(la), z = Math.cos(la) * Math.cos(lo);
+    return [x, y * Math.cos(t) - z * Math.sin(t), y * Math.sin(t) + z * Math.cos(t)];
+  }
+  function draw(g, W, H, dpr) {
+    const r = Math.min(W, H) * 0.42, cx = W / 2, cy = H / 2 + r * 0.05, mid = th / 2;
+    const S = p => [cx + r * p[0], cy - r * p[1]];
+    g.fillStyle = "#f7f5ef"; g.beginPath(); g.arc(cx, cy, r, 0, Math.PI * 2); g.fill();
+    g.strokeStyle = "#b9b3a7"; g.lineWidth = 1.2 * dpr; g.stroke();
+    const arc = (pts, color, w, dashBack) => {
+      for (let i = 0; i < pts.length - 1; i++) {
+        const a = pts[i], b = pts[i + 1], front = a[2] >= 0 && b[2] >= 0;
+        g.strokeStyle = color; g.lineWidth = w; g.setLineDash(front ? [] : dashBack);
+        if (!front && !dashBack.length) continue;
+        g.beginPath(); g.moveTo(...S(a)); g.lineTo(...S(b)); g.stroke();
+      }
+      g.setLineDash([]);
+    };
+    const range = (a, b, n, f) => Array.from({ length: n + 1 }, (_, i) => f(a + (b - a) * i / n));
+    // 위도선(적도) 전체, 경선 몇 개
+    arc(range(0, 360, 120, l => P(0, l, mid)), "#cfc9bd", dpr, [3 * dpr, 4 * dpr]);
+    for (let l = 0; l < 360; l += 45) arc(range(-90, 90, 60, a => P(a, l + mid, mid)), "#e6e1d7", dpr, []);
+    // 삼각형: 북극 N → 경도 0 적도 A → 경도 θ 적도 B → N
+    const e1 = range(90, 0, 60, a => P(a, 0, mid)), e2 = range(0, th, 80, l => P(0, l, mid)), e3 = range(0, 90, 60, a => P(a, th, mid));
+    const poly = e1.concat(e2, e3);
+    g.beginPath(); poly.forEach((p, i) => { const s = S(p); i ? g.lineTo(...s) : g.moveTo(...s); }); g.closePath();
+    g.fillStyle = "rgba(255,90,48,.18)"; g.fill();
+    [e1, e2, e3].forEach(e => arc(e, "#ff5a30", 2.5 * dpr, [4 * dpr, 4 * dpr]));
+    const N = S(P(90, 0, mid)), A = S(P(0, 0, mid)), B = S(P(0, th, mid));
+    [[N, "C (북극)"], [A, "A"], [B, "B"]].forEach(([p, t]) => {
+      dot(g, p[0], p[1], 4.5 * dpr, "#15171a", "#fff", 1.5 * dpr);
+      g.font = `800 ${12 * dpr}px sans-serif`; g.fillStyle = "#15171a"; g.textAlign = "center"; g.textBaseline = "bottom";
+      g.fillText(t, p[0], p[1] - 7 * dpr);
+    });
+    g.font = `700 ${11 * dpr}px ui-monospace,Consolas,monospace`; g.fillStyle = "#c2401f"; g.textBaseline = "top";
+    g.fillText("90°", A[0] + 18 * dpr, A[1] - 22 * dpr); g.fillText("90°", B[0] - 18 * dpr, B[1] - 22 * dpr);
+    g.fillText("θ=" + th + "°", N[0], N[1] + 8 * dpr);
+  }
+  function up() {
+    ro.innerHTML = `구면 삼각형 ABC: 90° + 90° + ${th}° = <b>${180 + th}°</b> (평면이라면 언제나 180°)<br>` +
+      `180°보다 큰 만큼(${th}°)은 삼각형 넓이에 비례합니다: 구 겉넓이의 ${fmt(th / 720 * 100, 1)}%`;
+  }
+  up();
+  api.readout = () => `구면에서 각 C가 ${th}°인 삼각형의 내각의 합은 ${180 + th}°로 180°보다 ${th}° 크다.`;
+};
+
+/* 03 n²+n+41 */
+LABS.primes = (host, api) => {
+  let K = 10;
+  const isPrime = m => { if (m < 2) return false; for (let d = 2; d * d <= m; d++) if (m % d === 0) return false; return true; };
+  const factor = m => { const f = []; for (let d = 2; d * d <= m; d++) while (m % d === 0) { f.push(d); m /= d; } if (m > 1) f.push(m); return f.join(" × "); };
+  const ctl = el("div", "row"); host.appendChild(ctl);
+  slider(ctl, "확인할 n의 최댓값", 0, 45, 1, K, v => "n = 0 ~ " + v, v => { K = v; draw(); });
+  const tw = el("div", "tbl-wrap"); host.appendChild(tw);
+  const ro = el("div", "ro"); host.appendChild(ro);
+  function draw() {
+    let first = -1, rows = "";
+    for (let n = 0; n <= K; n++) {
+      const v = n * n + n + 41, p = isPrime(v);
+      if (!p && first < 0) first = n;
+      rows += `<tr class="${p ? "" : "hit"}"><td>${n}</td><td>${v.toLocaleString("ko-KR")}</td><td>${p ? "소수" : "합성수 = " + factor(v)}</td></tr>`;
+    }
+    tw.innerHTML = `<table class="tbl"><thead><tr><th>n</th><th>n² + n + 41</th><th>판정</th></tr></thead><tbody>${rows}</tbody></table>`;
+    tw.scrollTop = tw.scrollHeight;
+    ro.innerHTML = first < 0
+      ? `n = 0부터 ${K}까지 <b>${K + 1}개 모두 소수</b>입니다. 그렇다면 모든 n에서 소수라고 말해도 될까요?`
+      : `n = 0부터 ${first - 1}까지 ${first}개는 모두 소수였지만,<br><b>n = ${first}</b>에서 ${first * first + first + 41} = ${factor(first * first + first + 41)} → <span class="warn">반례</span>`;
+  }
+  draw();
+  api.readout = () => { const ok = K < 40; return ok ? `n=0~${K}의 ${K + 1}개 사례에서 n²+n+41은 모두 소수였다.` : `n=0~39의 40개 사례는 모두 소수였지만 n=40에서 1681=41×41로 반례가 나왔다.`; };
+};
+
+/* 05 몬티 홀 */
+LABS.monty = (host, api) => {
+  const st = { car: 0, pick: -1, open: -1, phase: 0, msg: "문 하나를 고르세요." };
+  const mine = { stay: [0, 0], swap: [0, 0] };
+  const sim = { know: { stay: [0, 0], swap: [0, 0] }, rand: { stay: [0, 0], swap: [0, 0] } };
+  let rule = "know";
+  host.appendChild(el("div", "section-label", "직접 해 보기"));
+  const doors = el("div", "doors"); host.appendChild(doors);
+  const act = el("div", "row"); act.style.justifyContent = "center"; host.appendChild(act);
+  const msg = el("div", "status"); msg.style.textAlign = "center"; host.appendChild(msg);
+  function newGame() { st.car = Math.floor(Math.random() * 3); st.pick = -1; st.open = -1; st.phase = 0; st.msg = "문 하나를 고르세요."; drawDoors(); }
+  function drawDoors() {
+    doors.innerHTML = ""; act.innerHTML = "";
+    for (let i = 0; i < 3; i++) {
+      const showAll = st.phase === 2;
+      const opened = i === st.open || showAll;
+      const b = el("button", "door" + (i === st.pick ? " pick" : "") + (opened ? " open" : ""),
+        opened ? (i === st.car ? "🚗<small>자동차</small>" : "🐐<small>염소</small>") : `${i + 1}<small>문</small>`);
+      b.type = "button"; b.setAttribute("aria-label", `${i + 1}번 문`);
+      b.onclick = () => {
+        if (st.phase !== 0) return;
+        st.pick = i;
+        const goats = [0, 1, 2].filter(d => d !== i && d !== st.car);
+        st.open = goats[Math.floor(Math.random() * goats.length)];
+        st.phase = 1; st.msg = `진행자가 ${st.open + 1}번 문을 열어 염소를 보여 줍니다. 선택을 바꿀까요?`; drawDoors();
+      };
+      doors.appendChild(b);
+    }
+    if (st.phase === 1) {
+      const other = [0, 1, 2].find(d => d !== st.pick && d !== st.open);
+      const s1 = el("button", "btn", `그대로 ${st.pick + 1}번`), s2 = el("button", "btn primary", `${other + 1}번으로 바꾸기`);
+      [s1, s2].forEach(b => b.type = "button");
+      const fin = (k, final) => { st.pick = final; st.phase = 2; const win = final === st.car; mine[k][1]++; if (win) mine[k][0]++;
+        st.msg = (win ? "자동차를 얻었습니다!" : "염소였습니다.") + ` (내 기록: 유지 ${mine.stay[0]}/${mine.stay[1]}승, 바꾸기 ${mine.swap[0]}/${mine.swap[1]}승)`; drawDoors(); };
+      s1.onclick = () => fin("stay", st.pick); s2.onclick = () => fin("swap", other);
+      act.append(s1, s2);
+    }
+    if (st.phase === 2) { const n = el("button", "btn", "한 판 더"); n.type = "button"; n.onclick = newGame; act.appendChild(n); }
+    msg.textContent = st.msg;
+  }
+  host.appendChild(el("div", "section-label", "모의실험 (컴퓨터가 여러 번 대신 해 보기)"));
+  const ctl = el("div", "row"); host.appendChild(ctl);
+  seg(ctl, [["know", "진행자가 자동차 위치를 안다"], ["rand", "진행자가 아무 문이나 연다"]], rule, k => { rule = k; drawBars(); });
+  const run = n => {
+    const R = sim[rule];
+    for (let t = 0; t < n; t++) {
+      const car = Math.floor(Math.random() * 3), pick = Math.floor(Math.random() * 3);
+      let open;
+      if (rule === "know") { const g = [0, 1, 2].filter(d => d !== pick && d !== car); open = g[Math.floor(Math.random() * g.length)]; }
+      else { const g = [0, 1, 2].filter(d => d !== pick); open = g[Math.floor(Math.random() * 2)]; if (open === car) continue; } // 자동차가 열리면 이 판은 제외
+      const other = [0, 1, 2].find(d => d !== pick && d !== open);
+      R.stay[1]++; if (pick === car) R.stay[0]++;
+      R.swap[1]++; if (other === car) R.swap[0]++;
+    }
+    drawBars();
+  };
+  [[100, "100번"], [1000, "1000번"]].forEach(([n, t]) => { const b = el("button", "btn", t + " 실행"); b.type = "button"; b.onclick = () => run(n); ctl.appendChild(b); });
+  const rb = el("button", "btn", "기록 지우기"); rb.type = "button"; rb.onclick = () => { sim[rule] = { stay: [0, 0], swap: [0, 0] }; drawBars(); }; ctl.appendChild(rb);
+  const bars = el("div", "bars"); host.appendChild(bars);
+  const ro = el("div", "ro"); host.appendChild(ro);
+  const TH = { know: { stay: 1 / 3, swap: 2 / 3 }, rand: { stay: 1 / 2, swap: 1 / 2 } };
+  function drawBars() {
+    const R = sim[rule];
+    bars.innerHTML = [["stay", "선택 유지"], ["swap", "선택 바꾸기"]].map(([k, t]) => {
+      const p = R[k][1] ? R[k][0] / R[k][1] : 0;
+      return `<div class="bar"><span>${t}</span><span class="tr"><span class="fl" style="width:${p * 100}%"></span><span class="th" style="left:${TH[rule][k] * 100}%"></span></span><span class="v">${R[k][1] ? fmt(p * 100, 1) + "% (" + R[k][1] + "판)" : "—"}</span></div>`;
+    }).join("") + `<div class="src" style="font-size:11px;color:var(--muted)">주황 세로선 = 조건부확률로 계산한 값 (${rule === "know" ? "유지 1/3, 바꾸기 2/3" : "유지 1/2, 바꾸기 1/2 — 진행자가 우연히 염소를 연 판만 셈"})</div>`;
+    ro.innerHTML = R.stay[1]
+      ? `${rule === "know" ? "아는 진행자" : "모르는 진행자"} · ${R.stay[1]}판: 유지 승률 <b>${fmt(R.stay[0] / R.stay[1] * 100, 1)}%</b>, 바꾸기 승률 <b>${fmt(R.swap[0] / R.swap[1] * 100, 1)}%</b>`
+      : "먼저 직관으로 답을 정한 뒤 모의실험을 실행해 보세요.";
+  }
+  newGame(); drawBars();
+  api.readout = () => {
+    const a = sim.know, b = sim.rand, s = [];
+    if (a.stay[1]) s.push(`아는 진행자 ${a.stay[1]}판: 유지 ${fmt(a.stay[0] / a.stay[1] * 100, 1)}%, 바꾸기 ${fmt(a.swap[0] / a.swap[1] * 100, 1)}%`);
+    if (b.stay[1]) s.push(`모르는 진행자 ${b.stay[1]}판: 유지 ${fmt(b.stay[0] / b.stay[1] * 100, 1)}%, 바꾸기 ${fmt(b.swap[0] / b.swap[1] * 100, 1)}%`);
+    if (mine.stay[1] + mine.swap[1]) s.push("직접 해 본 기록: " + [["stay", "유지"], ["swap", "바꾸기"]].filter(([k]) => mine[k][1]).map(([k, t]) => `${t} ${mine[k][1]}판 중 ${mine[k][0]}승`).join(", "));
+    return s.length ? "몬티 홀 모의실험 — " + s.join(" / ") : "";
+  };
+};
+
+/* 06 식·표·그래프 */
+LABS.repr = (host, api) => {
+  const f = x => x ** 3 - 2 * x, xm = -Math.sqrt(2 / 3);
+  let h = 1, showD = false;
+  host.appendChild(el("div", "formula", "식: f(x) = x³ − 2x"));
+  const ctl = el("div", "row"); host.appendChild(ctl);
+  seg(ctl, [[1, "표 간격 1"], [0.5, "간격 0.5"], [0.1, "간격 0.1"]], h, k => { h = k; draw(); });
+  check(ctl, "미분으로 극대 확인", showD, v => { showD = v; draw(); });
+  const tw = el("div", "tbl-wrap"); tw.style.maxHeight = "150px"; host.appendChild(tw);
+  const cv = canvas(host, "16 / 9", (g, W, H, dpr) => {
+    const o = { xmin: -2.2, xmax: 2.2, ymin: -3, ymax: 3 };
+    const m = axes(g, W, H, dpr, o);
+    curve(g, f, o, m, "#15171a", 2.2 * dpr);
+    tableX().forEach(x => dot(g, m.X(x), m.Y(f(x)), 3.5 * dpr, "#2f6fd6"));
+    const bt = bestTable(); dot(g, m.X(bt), m.Y(f(bt)), 6 * dpr, null, "#2f6fd6", 2 * dpr);
+    if (showD) { dot(g, m.X(xm), m.Y(f(xm)), 6 * dpr, "#ff5a30", "#fff", 2 * dpr); }
+  });
+  const ro = el("div", "ro"); host.appendChild(ro);
+  const tableX = () => { const a = []; for (let i = 0; Math.round((-2 + i * h) * 1000) / 1000 <= 2; i++) a.push(Math.round((-2 + i * h) * 1000) / 1000); return a; };
+  const bestTable = () => { let b = -2; tableX().filter(x => x <= 0).forEach(x => { if (f(x) > f(b)) b = x; }); return b; };
+  function draw() {
+    const xs = tableX(), bt = bestTable();
+    tw.innerHTML = `<table class="tbl"><thead><tr><th>x</th>${xs.map(x => `<th>${x}</th>`).join("")}</tr></thead><tbody><tr><td>f(x)</td>${xs.map(x => `<td style="${x === bt ? "background:var(--accent-weak);font-weight:800" : ""}">${fmt(f(x), 3)}</td>`).join("")}</tr></tbody></table>`;
+    tw.querySelectorAll("th,td").forEach(c => c.style.textAlign = "center");
+    cv.redraw();
+    ro.innerHTML = `간격 ${h}인 표에서 x ≤ 0 중 가장 큰 값: x = <b>${bt}</b>, f(x) = ${fmt(f(bt), 3)}` +
+      (showD ? `<br>f′(x) = 3x² − 2 = 0 → 실제 극대: x = −√(2/3) ≈ <b>${fmt(xm, 4)}</b>, f(x) ≈ ${fmt(f(xm), 4)}` : "<br>표와 그래프만으로 극대의 위치를 정확히 말할 수 있을까요?");
+  }
+  draw();
+  api.readout = () => `f(x)=x³−2x: 간격 ${h}인 표에서는 x=${bestTable()}에서 가장 커 보였고, 미분하면 실제 극대는 x=−√(2/3)≈−0.8165이다.`;
+};
+
+/* 07 조건부확률과 언어 */
+LABS.cond = (host, api) => {
+  let prev = 1, sens = 99, spec = 99;
+  const ctl = el("div", "row"); host.appendChild(ctl);
+  const up = () => { cv.redraw(); text(); };
+  slider(ctl, "유병률 (전체 중 질병이 있는 사람)", 0.1, 30, 0.1, prev, v => fmt(v, 1) + "%", v => { prev = v; up(); });
+  slider(ctl, "민감도 P(양성 | 질병)", 50, 99.9, 0.1, sens, v => fmt(v, 1) + "%", v => { sens = v; up(); });
+  slider(ctl, "특이도 P(음성 | 건강)", 50, 99.9, 0.1, spec, v => fmt(v, 1) + "%", v => { spec = v; up(); });
+  const calc = () => {
+    const N = 10000, D = N * prev / 100, TP = D * sens / 100, FN = D - TP, Hh = N - D, FP = Hh * (1 - spec / 100), TN = Hh - FP;
+    return { N, D, TP, FN, FP, TN, ppv: TP / (TP + FP) };
+  };
+  const cv = canvas(host, "5 / 2", (g, W, H, dpr) => {
+    const c = calc(), cols = 50, rows = 20, n = cols * rows, k = n / c.N; // 1000칸 = 10000명 (1칸 = 10명)
+    const cw = W / cols, ch = H / rows;
+    const cnt = [c.TP * k, c.FN * k, c.FP * k, c.TN * k].map(Math.round);
+    const colors = ["#ff5a30", "#ffd2c4", "#2f6fd6", "#efebe2"];
+    let idx = 0;
+    cnt.forEach((m, ci) => { for (let j = 0; j < m && idx < n; j++, idx++) { const x = idx % cols, y = Math.floor(idx / cols); g.fillStyle = colors[ci]; g.fillRect(x * cw + dpr, y * ch + dpr, cw - 2 * dpr, ch - 2 * dpr); } });
+    while (idx < n) { const x = idx % cols, y = Math.floor(idx / cols); g.fillStyle = colors[3]; g.fillRect(x * cw + dpr, y * ch + dpr, cw - 2 * dpr, ch - 2 * dpr); idx++; }
+  });
+  host.appendChild(el("div", "legend",
+    `<span class="legend-item"><i style="background:#ff5a30"></i>질병 · 양성</span><span class="legend-item"><i style="background:#ffd2c4"></i>질병 · 음성</span><span class="legend-item"><i style="background:#2f6fd6"></i>건강 · 양성</span><span class="legend-item"><i style="background:#efebe2;border:1px solid #ccc"></i>건강 · 음성</span><span class="legend-item">한 칸 = 10명 (모두 10,000명)</span>`));
+  const ro = el("div", "ro"); host.appendChild(ro);
+  host.appendChild(el("div", "note", "<b>또 하나의 언어 문제: ‘또는’</b> 식당에서 “커피 또는 차”는 보통 둘 중 하나만 고르라는 뜻입니다. 수학의 A ∪ B(A 또는 B)는 둘 다인 경우도 포함합니다. 같은 낱말이 맥락에 따라 다른 뜻을 가질 때, 기호는 그 뜻을 하나로 고정합니다."));
+  function text() {
+    const c = calc();
+    ro.innerHTML = `P(양성 | 질병) = <b>${fmt(sens, 1)}%</b>  ← ‘검사의 정확도’<br>P(질병 | 양성) = ${fmt(c.TP, 0)} ÷ (${fmt(c.TP, 0)} + ${fmt(c.FP, 0)}) = <b>${fmt(c.ppv * 100, 1)}%</b>  ← 양성이 나온 사람이 실제로 아플 확률`;
+  }
+  text();
+  api.readout = () => `유병률 ${fmt(prev, 1)}%, 민감도 ${fmt(sens, 1)}%, 특이도 ${fmt(spec, 1)}%일 때 P(양성|질병)=${fmt(sens, 1)}%이지만 P(질병|양성)=${fmt(calc().ppv * 100, 1)}%이다.`;
+};
+
+/* 08·09 지수 모델과 로지스틱 모델 */
+LABS.model = (host, api, opt) => {
+  const T = [...Array(15).keys()];
+  const P = [4.3, 6.1, 9.8, 13.9, 21.0, 28.4, 39.6, 49.2, 61.8, 70.5, 80.1, 85.2, 91.0, 93.1, 96.4];
+  let k = (opt && opt.k) || 15, K = 110, show = { e: true, l: true };
+  const ctl = el("div", "row"); host.appendChild(ctl);
+  const kS = slider(ctl, "모델을 만들 때 쓰는 자료 (앞에서부터)", 4, 15, 1, k, v => v + "개" + (v < 15 ? ` (t = 0~${v - 1})` : " (전부)"), v => { k = v; up(); });
+  const KS = slider(ctl, "로지스틱 모델의 수용 한계 K", 60, 300, 1, K, v => String(v), v => { K = v; up(); });
+  const c2 = el("div", "row"); host.appendChild(c2);
+  check(c2, "지수 모델", true, v => { show.e = v; up(); });
+  check(c2, "로지스틱 모델", true, v => { show.l = v; up(); });
+  const lin = (xs, ys) => { const n = xs.length, mx = xs.reduce((a, b) => a + b) / n, my = ys.reduce((a, b) => a + b) / n; let sxy = 0, sxx = 0; xs.forEach((x, i) => { sxy += (x - mx) * (ys[i] - my); sxx += (x - mx) ** 2; }); const b = sxy / sxx; return [my - b * mx, b]; };
+  function fit() {
+    const t = T.slice(0, k), p = P.slice(0, k), Kmin = Math.max(...p) + 0.5, Ke = Math.max(K, Kmin);
+    const [c, d] = lin(t, p.map(Math.log)), fe = x => Math.exp(c + d * x);
+    const [a, b] = lin(t, p.map(v => Math.log(Ke / v - 1))), fl = x => Ke / (1 + Math.exp(a + b * x));
+    const rmse = (f, idx) => idx.length ? Math.sqrt(idx.reduce((s, i) => s + (P[i] - f(T[i])) ** 2, 0) / idx.length) : NaN;
+    const used = T.slice(0, k), held = T.slice(k);
+    return { fe, fl, Ke, Kmin, eIn: rmse(fe, used), lIn: rmse(fl, used), eOut: rmse(fe, held), lOut: rmse(fl, held), d };
+  }
+  const cv = canvas(host, "16 / 9", (g, W, H, dpr) => {
+    const F = fit(), o = { xmin: 0, xmax: 25, ymin: 0, ymax: 200 };
+    const m = axes(g, W, H, dpr, o);
+    g.fillStyle = "rgba(21,23,26,.05)"; g.fillRect(m.X(k - 0.5), m.T, m.X(25) - m.X(k - 0.5), g.canvas.height - m.T - m.B);
+    if (show.l) curve(g, F.fl, o, m, "#2f6fd6", 2.4 * dpr);
+    if (show.e) curve(g, F.fe, o, m, "#ff5a30", 2.4 * dpr);
+    if (show.l) { g.setLineDash([4 * dpr, 4 * dpr]); g.strokeStyle = "rgba(47,111,214,.5)"; g.lineWidth = dpr; g.beginPath(); g.moveTo(m.X(0), m.Y(F.Ke)); g.lineTo(m.X(25), m.Y(F.Ke)); g.stroke(); g.setLineDash([]); }
+    T.forEach(i => dot(g, m.X(i), m.Y(P[i]), 4 * dpr, i < k ? "#15171a" : "#fff", "#15171a", 1.5 * dpr));
+    g.font = `${10 * dpr}px sans-serif`; g.fillStyle = "#6b6f74"; g.textAlign = "left"; g.textBaseline = "top";
+    g.fillText("t (년)", m.X(23.2), m.Y(0) - 14 * dpr);
+  });
+  host.appendChild(el("div", "legend",
+    `<span class="legend-item"><i style="background:#15171a"></i>모델에 쓴 자료</span><span class="legend-item"><i style="background:#fff;border:1.5px solid #15171a"></i>남겨 둔 자료(예측 확인용)</span><span class="legend-item"><i style="background:#ff5a30"></i>지수 모델 P = a·eᵇᵗ</span><span class="legend-item"><i style="background:#2f6fd6"></i>로지스틱 모델 P = K / (1 + e^(a+bt))</span>`));
+  const ro = el("div", "ro"); host.appendChild(ro);
+  host.appendChild(el("p", "panel-desc", "자료: 어느 섬의 토끼 개체 수(단위: 10마리)를 나타낸 <b>가상의 자료</b>입니다. 로지스틱 모델은 K를 정하면 나머지 계수를 자료에 맞춰 계산합니다."));
+  function up() {
+    const F = fit();
+    if (K < F.Kmin) KS.set(Math.ceil(F.Kmin));
+    cv.redraw();
+    ro.innerHTML = `앞 ${k}개 자료로 만든 모델 · 쓴 자료에 대한 오차(RMSE): 지수 <b>${fmt(F.eIn)}</b>, 로지스틱 <b>${fmt(F.lIn)}</b><br>` +
+      (k < 15 ? `남겨 둔 ${15 - k}개 자료 예측 오차: 지수 <b>${fmt(F.eOut)}</b>, 로지스틱 <b>${fmt(F.lOut)}</b><br>` : "") +
+      `t = 25년 예측: 지수 <b>${fmt(F.fe(25), 0)}</b>, 로지스틱 <b>${fmt(F.fl(25), 0)}</b>` + (K < F.Kmin ? `<br><span class="warn">K는 쓴 자료의 최댓값보다 커야 해서 ${Math.ceil(F.Kmin)}로 맞췄습니다.</span>` : "");
+  }
+  up();
+  api.readout = () => { const F = fit(); return `앞 ${k}개 자료, K=${Math.round(F.Ke)}: 쓴 자료 오차 지수 ${fmt(F.eIn)}·로지스틱 ${fmt(F.lIn)}` + (k < 15 ? `, 남긴 자료 예측 오차 지수 ${fmt(F.eOut)}·로지스틱 ${fmt(F.lOut)}` : "") + `, t=25 예측 지수 ${fmt(F.fe(25), 0)}·로지스틱 ${fmt(F.fl(25), 0)}.`; };
+};
+
+/* 10 평균·중앙값, 잘린 축 */
+LABS.stats = (host, api) => {
+  const base = [210, 225, 230, 240, 245, 250, 260, 265, 270, 280, 290, 300, 310, 330];
+  let boss = 1500, incl = true, cut = false;
+  const ctl = el("div", "row"); host.appendChild(ctl);
+  slider(ctl, "대표의 월급(만 원)", 300, 3000, 10, boss, v => v.toLocaleString("ko-KR"), v => { boss = v; draw(); });
+  check(ctl, "대표 포함", incl, v => { incl = v; draw(); });
+  const data = () => incl ? base.concat([boss]) : base.slice();
+  const med = a => { const s = a.slice().sort((x, y) => x - y), n = s.length; return n % 2 ? s[(n - 1) / 2] : (s[n / 2 - 1] + s[n / 2]) / 2; };
+  const mean = a => a.reduce((x, y) => x + y) / a.length;
+  const cv = canvas(host, "16 / 6", (g, W, H, dpr) => {
+    const d = data(), o = { xmin: 150, xmax: Math.max(400, Math.max(...d) + 100), ymin: 0, ymax: 1 };
+    const L = 14 * dpr, R = 14 * dpr, X = x => L + (x - o.xmin) / (o.xmax - o.xmin) * (W - L - R), y0 = H * 0.62;
+    g.strokeStyle = "#b9b3a7"; g.lineWidth = dpr; g.beginPath(); g.moveTo(L, y0); g.lineTo(W - R, y0); g.stroke();
+    g.font = `${10 * dpr}px ui-monospace,Consolas,monospace`; g.fillStyle = "#9a958a"; g.textAlign = "center"; g.textBaseline = "top";
+    const st = niceStep(o.xmax - o.xmin, 6); for (let x = Math.ceil(o.xmin / st) * st; x <= o.xmax; x += st) { g.fillText(x, X(x), y0 + 6 * dpr); }
+    const stack = {}; d.forEach(v => { const key = Math.round(X(v) / (9 * dpr)); stack[key] = (stack[key] || 0) + 1; dot(g, X(v), y0 - 6 * dpr - (stack[key] - 1) * 11 * dpr, 4.5 * dpr, v === boss && incl ? "#15171a" : "#9a958a"); });
+    const line = (v, c, t, dy) => { g.strokeStyle = c; g.lineWidth = 2 * dpr; g.beginPath(); g.moveTo(X(v), 8 * dpr); g.lineTo(X(v), y0); g.stroke(); g.fillStyle = c; g.font = `800 ${11 * dpr}px sans-serif`; g.textAlign = "left"; g.textBaseline = "top"; g.fillText(t, X(v) + 4 * dpr, dy * dpr); };
+    line(mean(d), "#ff5a30", "평균 " + fmt(mean(d), 0), 8); line(med(d), "#2f6fd6", "중앙값 " + fmt(med(d), 0), 24);
+  });
+  const ro = el("div", "ro"); host.appendChild(ro);
+  host.appendChild(el("div", "section-label", "같은 수치, 다른 인상: 막대그래프의 세로축"));
+  const c2 = el("div", "row"); host.appendChild(c2);
+  check(c2, "세로축을 46%에서 시작하기", cut, v => { cut = v; cv2.redraw(); draw(); });
+  const cv2 = canvas(host, "16 / 6", (g, W, H, dpr) => {
+    const o = { xmin: 0, xmax: 2, ymin: cut ? 46 : 0, ymax: 54 };
+    const m = axes(g, W, H, dpr, { ...o, padL: 34 });
+    [["A 후보", 52, "#ff5a30"], ["B 후보", 48, "#2f6fd6"]].forEach(([t, v, c], i) => {
+      const x0 = m.X(i + 0.25), x1 = m.X(i + 0.75); g.fillStyle = c; g.fillRect(x0, m.Y(v), x1 - x0, m.Y(o.ymin) - m.Y(v));
+      g.fillStyle = "#15171a"; g.font = `800 ${11 * dpr}px sans-serif`; g.textAlign = "center"; g.textBaseline = "bottom"; g.fillText(`${t} ${v}%`, (x0 + x1) / 2, m.Y(v) - 3 * dpr);
+    });
+  });
+  function draw() {
+    const d = data();
+    cv.redraw();
+    ro.innerHTML = `직원 ${d.length}명 · 평균 <b>${fmt(mean(d), 1)}</b>만 원, 중앙값 <b>${fmt(med(d), 1)}</b>만 원<br>평균보다 월급이 적은 사람: ${d.filter(v => v < mean(d)).length}명 / ${d.length}명` +
+      `<br>지지율 52% 대 48%: 세로축을 ${cut ? "46%에서 시작하면 막대 길이가 3배 차이로 보입니다" : "0에서 시작하면 막대 길이 차이가 작게 보입니다"}.`;
+  }
+  draw();
+  api.readout = () => { const d = data(); return `대표 월급 ${boss}만 원${incl ? " 포함" : " 제외"}: 평균 ${fmt(mean(d), 1)}만 원, 중앙값 ${fmt(med(d), 1)}만 원, 평균보다 적게 받는 사람 ${d.filter(v => v < mean(d)).length}/${d.length}명.`; };
+};
+
+/* 11 그래프 창과 실제 해 */
+LABS.tech = (host, api) => {
+  let xmin = -5, xmax = 5, yk = 2;
+  const ctl = el("div", "row"); host.appendChild(ctl);
+  slider(ctl, "x 최솟값", -5, 0, 0.5, xmin, v => String(v), v => { xmin = v; up(); });
+  slider(ctl, "x 최댓값", 2, 40, 0.5, xmax, v => String(v), v => { xmax = v; up(); });
+  slider(ctl, "y 최댓값 (10의 거듭제곱)", 1, 16, 1, yk, v => "10^" + v, v => { yk = v; up(); });
+  const h = x => x - 10 * Math.log(Math.abs(x));      // eˣ = x¹⁰ ⇔ x = 10·ln|x| (x ≠ 0)
+  const bis = (a, b) => { let fa = h(a); for (let i = 0; i < 80; i++) { const m = (a + b) / 2, fm = h(m); if (fa * fm <= 0) b = m; else { a = m; fa = fm; } } return (a + b) / 2; };
+  const roots = [bis(-1, -0.5), bis(1, 1.5), bis(30, 40)];
+  const f = x => Math.exp(x), g2 = x => x ** 10;
+  const visible = () => { const ym = 10 ** yk; return roots.filter(r => r >= xmin && r <= xmax && f(r) <= ym); };
+  const cv = canvas(host, "16 / 9", (g, W, H, dpr) => {
+    const ym = 10 ** yk, o = { xmin, xmax, ymin: -ym * 0.04, ymax: ym };
+    const m = axes(g, W, H, dpr, { ...o, padL: 52 });
+    curve(g, f, o, m, "#ff5a30", 2.2 * dpr); curve(g, g2, o, m, "#2f6fd6", 2.2 * dpr);
+    visible().forEach(r => dot(g, m.X(r), m.Y(f(r)), 5 * dpr, "#15171a", "#fff", 1.5 * dpr));
+  });
+  host.appendChild(el("div", "legend", `<span class="legend-item"><i style="background:#ff5a30"></i>y = eˣ</span><span class="legend-item"><i style="background:#2f6fd6"></i>y = x¹⁰</span><span class="legend-item"><i style="background:#15171a"></i>이 창에서 보이는 교점</span>`));
+  const ro = el("div", "ro"); host.appendChild(ro);
+  function up() {
+    if (xmax <= xmin) xmax = xmin + 1;
+    cv.redraw();
+    ro.innerHTML = `그래프 창 x ∈ [${xmin}, ${xmax}], y ≤ 10^${yk} 에서 보이는 교점: <b>${visible().length}개</b><br>` +
+      `eˣ = x¹⁰ ⇔ x = 10·ln|x| 를 풀면 실제 교점은 <b>3개</b>: x ≈ ${roots.map(r => fmt(r, 4)).join(", ")}`;
+  }
+  up();
+  api.readout = () => `창 x∈[${xmin},${xmax}], y≤10^${yk}에서는 교점이 ${visible().length}개 보였지만, 실제로는 x≈${roots.map(r => fmt(r, 3)).join(", ")}의 3개다.`;
+};
+
+/* 12 홀수의 합 */
+LABS.odd = (host, api) => {
+  let n = 5, alg = false;
+  const ctl = el("div", "row"); host.appendChild(ctl);
+  slider(ctl, "n", 1, 12, 1, n, v => String(v), v => { n = v; cv.redraw(); up(); });
+  check(ctl, "대수적 증명도 보기", alg, v => { alg = v; up(); });
+  const cv = canvas(host, "16 / 9", (g, W, H, dpr) => {
+    const s = Math.min((H - 20 * dpr) / n, (W * 0.55) / n), x0 = 20 * dpr, y0 = H - 10 * dpr;
+    const cols = ["#ff5a30", "#2f6fd6", "#2fa36b", "#d9a400"];
+    for (let k = 1; k <= n; k++) {
+      g.fillStyle = cols[(k - 1) % 4];
+      for (let i = 0; i < k; i++) { g.fillRect(x0 + i * s + 1, y0 - k * s + 1, s - 2, s - 2); }
+      for (let j = 0; j < k - 1; j++) { g.fillRect(x0 + (k - 1) * s + 1, y0 - (j + 1) * s + 1, s - 2, s - 2); }
+    }
+    g.fillStyle = "#15171a"; g.font = `800 ${13 * dpr}px sans-serif`; g.textAlign = "left"; g.textBaseline = "middle";
+    const terms = Array.from({ length: n }, (_, i) => 2 * i + 1);
+    g.fillText(`${terms.slice(0, 6).join(" + ")}${n > 6 ? " + …" : ""}`, x0 + n * s + 20 * dpr, H / 2 - 12 * dpr);
+    g.fillText(`= ${n * n} = ${n}²`, x0 + n * s + 20 * dpr, H / 2 + 12 * dpr);
+  });
+  const ro = el("div", "ro"); host.appendChild(ro);
+  function up() {
+    ro.innerHTML = `시각적 증명: k번째 ‘ㄱ자’ 조각에는 정사각형이 2k − 1개 있고, 조각을 하나 붙일 때마다 (k−1)×(k−1) 정사각형이 k×k가 됩니다.` +
+      (alg ? `<br>대수적 증명: Σ(2k − 1) = 2·n(n+1)/2 − n = n² + n − n = <b>n²</b>` : "");
+  }
+  up();
+  api.readout = () => `1+3+…+${2 * n - 1}=${n * n}=${n}². ㄱ자 조각을 붙여 정사각형이 커지는 그림으로 이유를 설명할 수 있다.`;
+};
+
+/* 13 1부터 n까지의 합 */
+LABS.gauss = (host, api) => {
+  let n = 10, pair = false;
+  const ctl = el("div", "row"); host.appendChild(ctl);
+  slider(ctl, "n", 1, 30, 1, n, v => String(v), v => { n = v; cv.redraw(); up(); });
+  check(ctl, "같은 계단을 뒤집어 짝짓기", pair, v => { pair = v; cv.redraw(); up(); });
+  const cv = canvas(host, "16 / 9", (g, W, H, dpr) => {
+    const s = Math.min((H - 20 * dpr) / n, (W - 40 * dpr) / (n + 1)), x0 = (W - (n + 1) * s) / 2, y0 = H - 10 * dpr;
+    for (let i = 1; i <= n; i++) for (let j = 0; j < i; j++) { g.fillStyle = "#15171a"; g.fillRect(x0 + j * s + 1, y0 - i * s + 1, s - 2, s - 2); }
+    if (pair) for (let i = 1; i <= n; i++) for (let j = i; j < n + 1; j++) { g.fillStyle = "#ff5a30"; g.fillRect(x0 + j * s + 1, y0 - i * s + 1, s - 2, s - 2); }
+  });
+  const ro = el("div", "ro"); host.appendChild(ro);
+  function up() {
+    const sum = n * (n + 1) / 2;
+    ro.innerHTML = `직접 더하기: 1 + 2 + … + ${n} → 덧셈 <b>${n - 1}번</b><br>` +
+      (pair ? `짝짓기: 검은 계단 + 주황 계단 = ${n} × ${n + 1} 직사각형 → 합 = ${n}×${n + 1} ÷ 2 = <b>${sum}</b> (곱셈 한 번, 나눗셈 한 번)` : `합 = <b>${sum}</b>. 더 간결한 방법은 없을까요?`);
+  }
+  up();
+  api.readout = () => `1+2+…+${n}=${n * (n + 1) / 2}. 직접 더하면 덧셈 ${n - 1}번, 계단 두 개를 짝지어 ${n}×${n + 1} 직사각형을 만들면 한 번에 구할 수 있다.`;
+};
+
+/* 14 수 표기법 */
+LABS.numerals = (host, api) => {
+  let v = 2026;
+  const row = el("div", "row"); host.appendChild(row);
+  const inp = el("input"); inp.type = "number"; inp.min = 1; inp.max = 3999; inp.value = v; inp.style.cssText = "width:9em;padding:9px 10px;border:1px solid #d3cec3;border-radius:10px;font-weight:800";
+  inp.setAttribute("aria-label", "수 입력 (1~3999)"); row.append(el("span", "section-label", "수 입력 (1~3999)"), inp);
+  inp.oninput = () => { const x = Math.round(+inp.value); if (x >= 1 && x <= 3999) { v = x; draw(); } };
+  const out = el("div", "tbl-wrap"); out.style.maxHeight = "none"; host.appendChild(out);
+  const ro = el("div", "ro"); host.appendChild(ro);
+  const digits = (n, b) => { const d = []; while (n > 0) { d.unshift(n % b); n = Math.floor(n / b); } return d; };
+  const roman = n => { const T = [[1000, "M"], [900, "CM"], [500, "D"], [400, "CD"], [100, "C"], [90, "XC"], [50, "L"], [40, "XL"], [10, "X"], [9, "IX"], [5, "V"], [4, "IV"], [1, "I"]]; let s = ""; T.forEach(([a, r]) => { while (n >= a) { s += r; n -= a; } }); return s; };
+  const HJ = "〇一二三四五六七八九", KR = ["", "일", "이", "삼", "사", "오", "육", "칠", "팔", "구"];
+  const hanja = n => { const P = ["千", "百", "十", ""], PK = ["천", "백", "십", ""]; const s = String(n).padStart(4, "0"); let h = "", k = ""; for (let i = 0; i < 4; i++) { const d = +s[i]; if (!d) continue; h += (d === 1 && i < 3 ? "" : HJ[d]) + P[i]; k += (d === 1 && i < 3 ? "" : KR[d]) + PK[i]; } return [h, k]; };
+  function draw() {
+    const [h, k] = hanja(v);
+    const R = [
+      ["10진법", String(v), "자릿값 1, 10, 100, 1000"],
+      ["2진법", digits(v, 2).join(""), "컴퓨터가 쓰는 방식"],
+      ["12진법", digits(v, 12).map(d => d < 10 ? d : "AB"[d - 10]).join(""), "A=10, B=11 (12개월, 1다스)"],
+      ["20진법 (마야)", digits(v, 20).join(" · "), "자리마다 0~19 · 자릿값 1, 20, 400"],
+      ["60진법 (바빌로니아)", digits(v, 60).join(" · "), "자리마다 0~59 · 시간의 분·초, 각도"],
+      ["로마 숫자", roman(v), "0과 자릿값이 없는 덧셈·뺄셈식 표기"],
+      ["한자 수", `${h} (${k})`, "자릿값 이름(十, 百, 千)을 붙이는 방식"]
+    ];
+    out.innerHTML = `<table class="tbl"><thead><tr><th>표기법</th><th>${v}의 표기</th><th>특징</th></tr></thead><tbody>${R.map(r => `<tr><td style="text-align:left;font-weight:800">${r[0]}</td><td style="text-align:left;font-family:ui-monospace,Consolas,monospace">${esc(r[1])}</td><td style="text-align:left;color:var(--muted)">${r[2]}</td></tr>`).join("")}</tbody></table>`;
+    ro.innerHTML = `표기는 7가지로 다르지만 모두 같은 수 <b>${v}</b>을 나타냅니다.<br>${v}이 짝수인지, 3의 배수인지 같은 성질은 표기와 상관없이 같습니다: ${v % 2 ? "홀수" : "짝수"}, ${v % 3 ? "3의 배수 아님" : "3의 배수"}.`;
+  }
+  draw();
+  api.readout = () => `${v}은 2진법 ${digits(v, 2).join("")}, 60진법 ${digits(v, 60).join("·")}, 로마 숫자 ${roman(v)}로 표기가 달라도 같은 수다.`;
+};
+
+/* 15 가중치와 순위 */
+LABS.weights = (host, api) => {
+  const ST = [["가", 92, 70, 80], ["나", 85, 88, 90], ["다", 78, 95, 85], ["라", 88, 82, 60], ["마", 70, 92, 98], ["바", 95, 65, 75]];
+  const NAMES = ["지필평가", "수행평가", "과제·태도"], BASE = [60, 30, 10];
+  let w = BASE.slice();
+  const ctl = el("div", "row"); host.appendChild(ctl);
+  const sls = NAMES.map((t, i) => slider(ctl, t + " 비중", 0, 100, 5, w[i], v => v + "", v => { w[i] = v; draw(); }));
+  const rb = el("button", "btn", "처음 비중(60·30·10)으로"); rb.type = "button"; rb.onclick = () => { w = BASE.slice(); sls.forEach((s, i) => s.set(w[i])); draw(); }; host.appendChild(rb);
+  const tw = el("div", "tbl-wrap"); tw.style.maxHeight = "none"; host.appendChild(tw);
+  const ro = el("div", "ro"); host.appendChild(ro);
+  const rank = W => { const tot = W.reduce((a, b) => a + b, 0) || 1; const s = ST.map(r => ({ n: r[0], sc: (r[1] * W[0] + r[2] * W[1] + r[3] * W[2]) / tot })); const sorted = s.slice().sort((a, b) => b.sc - a.sc); s.forEach(x => x.rk = sorted.indexOf(x) + 1); return s; };
+  function draw() {
+    const now = rank(w), base = rank(BASE), tot = w.reduce((a, b) => a + b, 0);
+    tw.innerHTML = `<table class="tbl"><thead><tr><th>학생</th>${NAMES.map(t => `<th>${t}</th>`).join("")}<th>환산 점수</th><th>순위</th><th>처음과 비교</th></tr></thead><tbody>` +
+      now.slice().sort((a, b) => a.rk - b.rk).map(x => { const r = ST.find(s => s[0] === x.n), b = base.find(s => s.n === x.n), dlt = b.rk - x.rk;
+        return `<tr class="${x.rk === 1 ? "hit" : ""}"><td>${x.n}</td><td>${r[1]}</td><td>${r[2]}</td><td>${r[3]}</td><td>${fmt(x.sc, 1)}</td><td>${x.rk}위</td><td>${dlt > 0 ? "▲" + dlt : dlt < 0 ? "▼" + (-dlt) : "−"}</td></tr>`; }).join("") + "</tbody></table>";
+    const top = now.find(x => x.rk === 1).n;
+    ro.innerHTML = tot ? `비중 ${w.join(" : ")} → 1위 <b>${top}</b> (처음 비중 60 : 30 : 10일 때 1위 ${base.find(x => x.rk === 1).n})<br>계산은 어느 경우에나 정확합니다. 무엇이 달라졌을까요?` : `<span class="warn">비중을 하나 이상 0보다 크게 정하세요.</span>`;
+  }
+  draw();
+  api.readout = () => { const now = rank(w); return `가중치 ${w.join(":")}에서 1위는 ${now.find(x => x.rk === 1).n}(처음 60:30:10에서는 ${rank(BASE).find(x => x.rk === 1).n}), 순위가 바뀐 학생 ${now.filter(x => x.rk !== rank(BASE).find(b => b.n === x.n).rk).length}명.`; };
+};
+
+/* ───────── 화면 ───────── */
+let view = { n: "home" }, areaFilter = "", bankQ = "";
+const viewEl = $("#view"), tabsEl = $("#tabs");
+const filled = id => { const s = S.t[id]; if (!s) return 0; return ["f1", "f2", "f3", "f4"].filter(k => (s[k] || "").trim()).length; };
+const doneCount = () => TOPICS.filter(t => filled(t.id) === 4).length;
+function go(v) { view = v; render(); window.scrollTo(0, 0); }
+
+function renderTabs() {
+  tabsEl.innerHTML = "";
+  [["home", "탐구 활동 15"], ["bank", "가이드 질문 은행"], ["report", "내 성찰 보고서"]].forEach(([k, t]) => {
+    const b = el("button", "tab" + ((view.n === k || (k === "home" && view.n === "topic")) ? " on" : ""), t); b.type = "button";
+    b.onclick = () => go({ n: k }); tabsEl.appendChild(b);
+  });
+  $("#stateBadge").textContent = `성찰 ${doneCount()} / ${TOPICS.length}`;
+}
+
+function home(w) {
+  const h = el("section", "hero");
+  h.innerHTML = `<h2>“수학으로 무엇을 계산할 수 있는가?”에서 “그 결과를 어떤 근거로 지식이라고 인정하는가?”로</h2>
+  <p>IB는 지식이론(TOK)을 지식의 본질과 ‘우리가 안다고 주장하는 것을 어떻게 아는가’를 성찰하는 과정으로 설명합니다. 각 활동에서 먼저 실험으로 수학적 결과를 확보하고, 그 결과를 받아들이는 근거와 조건을 질문해 보세요.</p>
+  <p class="src" style="font-size:11.5px;color:var(--muted)">아래 질문과 활동은 수학 수업을 위해 구성한 예시이며, 공식 TOK 에세이 지정 제목이나 전시 프롬프트가 아닙니다. 모든 기록은 이 브라우저에만 저장됩니다.</p>`;
+  w.appendChild(h);
+  const f = el("div", "chips"); w.appendChild(f);
+  ["", ...AREAS].forEach(a => { const b = el("button", "chip" + (a === areaFilter ? " on" : ""), a || "전체 영역"); b.type = "button"; b.onclick = () => { areaFilter = a; render(); }; f.appendChild(b); });
+  const cards = el("div", "cards"); w.appendChild(cards);
+  TOPICS.filter(t => !areaFilter || t.area === areaFilter).forEach(t => {
+    const n = filled(t.id), logs = (S.t[t.id] && S.t[t.id].log.length) || 0;
+    const c = el("button", "card", `<span class="no">TOK ${t.id} · ${t.area}</span><span class="t">${esc(t.title)}</span><span class="kq">${esc(t.kq)}</span>
+      <span class="meta"><span class="pill">${esc(t.math)}</span><span class="pill ${n === 4 ? "done" : n ? "mid" : ""}">${n === 4 ? "성찰 완료" : n ? "성찰 " + n + "/4" : "시작 전"}</span>${logs ? `<span class="pill">실험 기록 ${logs}</span>` : ""}</span>`);
+    c.type = "button"; c.onclick = () => go({ n: "topic", id: t.id }); cards.appendChild(c);
+  });
+  const ws = el("div", "workspace"); w.appendChild(ws);
+  const p1 = el("section", "panel", `<div class="panel-head"><div class="panel-title">수학 질문을 TOK 질문으로 바꾸기</div><div class="panel-desc">수학 활동의 구체적인 결과를 먼저 확보한 뒤, 그 결과를 받아들이는 근거와 조건을 질문합니다.</div></div>
+    <div class="panel-body"><table class="bridge"><thead><tr><th>수학 질문</th><th>TOK 지식 질문</th></tr></thead><tbody>${BRIDGE.map(r => `<tr><td>${r[0]}</td><td><b>${r[1]}</b></td></tr>`).join("")}</tbody></table></div>`);
+  const p2 = el("section", "panel", `<div class="panel-head"><div class="panel-title">성찰은 이렇게 봅니다</div><div class="panel-desc">찬반 입장 자체보다 아래 네 가지를 중심으로 살펴봅니다.</div></div>
+    <div class="panel-body stack"><div class="crit">${CRITERIA.map(c => `<div><b>${c[0]}</b>${c[1]}</div>`).join("")}</div>
+    <div class="sentence">나는 처음에 <mark>___</mark>라고 판단했다. 그러나 <mark>___</mark>라는 근거·반례를 검토하면서 판단을 수정했다. 따라서 이 지식은 <mark>___</mark>라는 조건에서 신뢰할 수 있으며, <mark>___</mark>까지 확대하여 주장하기는 어렵다.</div></div>`);
+  ws.append(p1, p2);
+}
+
+function sentenceOf(s) {
+  const b = (v) => (v || "").trim() ? `<mark>${esc(v.trim())}</mark>` : `<span class="blank">___</span>`;
+  return `나는 처음에 ${b(s.f1)}라고 판단했다. 그러나 ${b(s.f2)}라는 근거·반례를 검토하면서 판단을 수정했다. 따라서 이 지식은 ${b(s.f3)}라는 조건에서 신뢰할 수 있으며, ${b(s.f4)}까지 확대하여 주장하기는 어렵다.`;
+}
+const plainSentence = s => `나는 처음에 ${(s.f1 || "___").trim()}라고 판단했다. 그러나 ${(s.f2 || "___").trim()}라는 근거·반례를 검토하면서 판단을 수정했다. 따라서 이 지식은 ${(s.f3 || "___").trim()}라는 조건에서 신뢰할 수 있으며, ${(s.f4 || "___").trim()}까지 확대하여 주장하기는 어렵다.`;
+const chosenQ = (t, s) => s.q === "kq" ? t.kq : (BANK_BY_ID[s.q] ? BANK_BY_ID[s.q].q : t.kq);
+
+function topic(w, t) {
+  const s = TS(t.id), idx = TOPICS.indexOf(t);
+  const cr = el("nav", "crumb"); const hb = el("button", null, "탐구 활동"); hb.type = "button"; hb.onclick = () => go({ n: "home" });
+  cr.append(hb, document.createTextNode(` › TOK ${t.id} · ${t.area}`)); w.appendChild(cr);
+  const hd = el("section", "topic-head");
+  hd.innerHTML = `<span class="no" style="font-family:ui-monospace,Consolas,monospace;font-size:11px;color:var(--accent);font-weight:800">TOK ${t.id}</span><h2>${esc(t.title)}</h2>
+  <div class="facts"><div class="fact kq"><b>지식 질문</b>${esc(t.kq)}</div><div class="fact"><b>수학 내용</b>${esc(t.math)}</div>
+  <div class="fact"><b>탐구활동</b>${esc(t.act)}</div><div class="fact"><b>핵심 논점</b>${esc(t.point)}</div></div>`;
+  w.appendChild(hd);
+  const ws = el("div", "workspace"); w.appendChild(ws);
+
+  /* 왼쪽: 수학 질문과 실험 */
+  const L = el("section", "panel");
+  L.innerHTML = `<div class="panel-head"><div class="panel-title">① 수학 질문과 실험</div><div class="panel-desc">${esc(t.mq)}</div></div>`;
+  const lb = el("div", "panel-body lab-box"); L.appendChild(lb);
+  const labHost = el("div", "lab-box"); lb.appendChild(labHost);
+  const api = { readout: () => "" };
+  LABS[t.lab](labHost, api, t.labOpt);
+  const logHd = el("div", "row"); logHd.style.justifyContent = "space-between";
+  logHd.innerHTML = `<b style="font-size:13px">실험 결과 기록 (성찰의 근거)</b>`;
+  const addB = el("button", "btn primary", "지금 결과를 기록에 추가"); addB.type = "button"; logHd.appendChild(addB); lb.appendChild(logHd);
+  const logList = el("ol", "loglist"); lb.appendChild(logList);
+  const drawLog = () => {
+    logList.innerHTML = s.log.length ? "" : `<li style="list-style:none;margin-left:-1.2em;color:var(--muted)">아직 기록이 없습니다. 실험한 뒤 위 단추를 눌러 결과를 남기세요.</li>`;
+    s.log.forEach((x, i) => { const li = el("li", null, esc(x)); const d = el("button", null, "삭제"); d.type = "button"; d.onclick = () => { s.log.splice(i, 1); save(); drawLog(); }; li.appendChild(d); logList.appendChild(li); });
+  };
+  addB.onclick = () => { const r = api.readout(); if (!r) { toast("먼저 실험을 해 보세요"); return; } if (s.log.length >= 8) { toast("기록은 8개까지 남길 수 있어요"); return; } s.log.push(r); save(); drawLog(); toast("기록에 추가했어요"); };
+  drawLog();
+  if (t.disc) lb.appendChild(el("div", "disc", `<b>토론 질문</b> ${esc(t.disc)}`));
+  ws.appendChild(L);
+
+  /* 오른쪽: TOK 질문 선택과 성찰 */
+  const R = el("section", "panel");
+  R.innerHTML = `<div class="panel-head"><div class="panel-title">② TOK 성찰</div><div class="panel-desc">성찰할 지식 질문을 하나 고르고, 실험 기록을 근거로 문장 틀을 채우세요.</div></div>`;
+  const rb = el("div", "panel-body refl"); R.appendChild(rb);
+  const qs = [["kq", t.kq, "이 활동의 지식 질문"]].concat(t.rel.filter(id => BANK_BY_ID[id]).map(id => [id, BANK_BY_ID[id].q, `AA 가이드 · ${BANK_BY_ID[id].unit}`]));
+  const qBox = el("div"); rb.appendChild(qBox);
+  qs.forEach(([id, q, src]) => {
+    const l = el("label", "qopt" + (s.q === id ? " on" : ""), `<input type="radio" name="q-${t.id}" ${s.q === id ? "checked" : ""}><span><span class="src">${esc(src)}</span>${esc(q)}</span>`);
+    $("input", l).onchange = () => { s.q = id; save(); $$(".qopt", qBox).forEach(x => x.classList.remove("on")); l.classList.add("on"); };
+    qBox.appendChild(l);
+  });
+  const F = [["f1", "① 나는 처음에 ___라고 판단했다.", "직관이나 처음 생각: 예) 사례가 계속 맞으니 항상 성립할 것이다"],
+             ["f2", "② 그러나 ___라는 근거·반례를 검토하면서 판단을 수정했다.", "왼쪽 실험 기록에서 판단을 바꾼 근거나 반례"],
+             ["f3", "③ 따라서 이 지식은 ___라는 조건에서 신뢰할 수 있으며,", "어떤 가정·정의·범위 안에서 믿을 수 있는가"],
+             ["f4", "④ ___까지 확대하여 주장하기는 어렵다.", "어디까지는 넘어서 주장할 수 없는가"],
+             ["o", "다른 관점: 나와 다르게 생각할 사람은 무엇을 근거로 들까?", "다른 사람, 다른 문화, 다른 지식 영역(자연과학·인문학 등)의 관점"]];
+  const sent = el("div", "sentence");
+  F.forEach(([k, lab, ph]) => {
+    const id = `${k}-${t.id}`;
+    const l = el("label", null, esc(lab)); l.htmlFor = id; rb.appendChild(l);
+    const ta = el("textarea"); ta.id = id; ta.placeholder = ph; ta.value = s[k] || "";
+    ta.oninput = () => { s[k] = ta.value; save(); sent.innerHTML = sentenceOf(s); renderTabs(); };
+    rb.appendChild(ta);
+  });
+  rb.appendChild(el("label", null, "완성된 성찰 문장"));
+  sent.innerHTML = sentenceOf(s); rb.appendChild(sent);
+  rb.appendChild(el("label", null, "스스로 점검하기"));
+  const cb = el("div", "stack"); cb.style.gap = "6px"; rb.appendChild(cb);
+  CRITERIA.forEach(([c, d], i) => {
+    const l = el("label", "ck", `<input type="checkbox"${s.chk.includes(i) ? " checked" : ""}><span><b>${c}</b> <span style="font-weight:500;color:var(--muted)">${d}</span></span>`);
+    $("input", l).onchange = e => { s.chk = s.chk.filter(x => x !== i); if (e.target.checked) s.chk.push(i); save(); };
+    cb.appendChild(l);
+  });
+  ws.appendChild(R);
+
+  const pg = el("div", "pager");
+  const pv = el("button", "btn", idx > 0 ? `← TOK ${TOPICS[idx - 1].id} ${TOPICS[idx - 1].title}` : "← 탐구 활동 목록"); pv.type = "button";
+  pv.onclick = () => go(idx > 0 ? { n: "topic", id: TOPICS[idx - 1].id } : { n: "home" });
+  const nx = el("button", "btn primary", idx < TOPICS.length - 1 ? `TOK ${TOPICS[idx + 1].id} ${TOPICS[idx + 1].title} →` : "내 성찰 보고서 →"); nx.type = "button";
+  nx.onclick = () => go(idx < TOPICS.length - 1 ? { n: "topic", id: TOPICS[idx + 1].id } : { n: "report" });
+  pg.append(pv, nx); w.appendChild(pg);
+}
+
+function bank(w) {
+  const p = el("section", "panel");
+  p.innerHTML = `<div class="panel-head"><div class="panel-title">「수학: 분석과 접근 가이드(지식이론)」 질문 은행</div><div class="panel-desc">AA 다섯 영역과 단원별로 정리했습니다. <b>지식이론</b> 질문과 함께 <b style="color:#2f6fd6">국제적 소양</b> 항목도 있습니다. 관련 활동이 있으면 바로 갈 수 있어요.</div></div>`;
+  const b = el("div", "panel-body stack"); p.appendChild(b); w.appendChild(p);
+  const s = el("input", "search"); s.type = "search"; s.placeholder = "낱말로 찾기: 예) 직관, 모델, 문화, 윤리, 무한"; s.value = bankQ; s.setAttribute("aria-label", "질문 검색"); b.appendChild(s);
+  const f = el("div", "chips"); b.appendChild(f);
+  ["", ...AREAS].forEach(a => { const c = el("button", "chip" + (a === areaFilter ? " on" : ""), a || "전체 영역"); c.type = "button"; c.onclick = () => { areaFilter = a; list(); $$(".chip", f).forEach(x => x.classList.toggle("on", x === c)); }; f.appendChild(c); });
+  const out = el("div"); b.appendChild(out);
+  const usedBy = id => TOPICS.filter(t => t.rel.includes(id));
+  function list() {
+    const q = bankQ.trim();
+    let html = "", n = 0;
+    AREAS.filter(a => !areaFilter || a === areaFilter).forEach(a => {
+      let ah = "";
+      BANK.filter(g => g.area === a).forEach(g => {
+        const items = g.qs.filter(x => !q || x[2].includes(q) || g.unit.includes(q));
+        if (!items.length) return;
+        ah += `<div class="bank-unit">${esc(g.unit)}</div>` + items.map(([id, k, text]) => {
+          n++; const u = usedBy(id);
+          return `<div class="bank-q"><span class="k ${k === "IM" ? "im" : ""}">${k === "IM" ? "국제적 소양" : k === "CTX" ? "다른 맥락" : "지식이론"}</span>${esc(text)}${u.length ? `<div class="links">${u.map(t => `<button type="button" data-go="${t.id}">TOK ${t.id} ${esc(t.title)} 활동으로</button>`).join("")}</div>` : ""}</div>`;
+        }).join("");
+      });
+      if (ah) html += `<div class="bank-group"><h3>${a}</h3>${ah}</div>`;
+    });
+    out.innerHTML = html || `<div class="note">“${esc(q)}”가 들어간 질문이 없습니다.</div>`;
+    $$("[data-go]", out).forEach(x => x.onclick = () => go({ n: "topic", id: x.dataset.go }));
+  }
+  s.oninput = () => { bankQ = s.value; list(); };
+  list();
+}
+
+function reportText() {
+  const L = [`[IB AA · 지식이론(TOK) 성찰 보고서]`, `이름: ${S.name || "(미입력)"}   날짜: ${new Date().toLocaleDateString("ko-KR")}`, ""];
+  const used = TOPICS.filter(t => { const s = S.t[t.id]; return s && (filled(t.id) || s.log.length || (s.o || "").trim()); });
+  if (!used.length) L.push("(아직 작성한 활동이 없습니다)");
+  used.forEach(t => {
+    const s = S.t[t.id];
+    L.push(`■ TOK ${t.id}. ${t.title} (${t.area})`);
+    L.push(`지식 질문: ${chosenQ(t, s)}`);
+    L.push(`수학 질문: ${t.mq}`);
+    L.push(`실험 결과 기록:`); (s.log.length ? s.log : ["(없음)"]).forEach((x, i) => L.push(`  ${s.log.length ? i + 1 + ") " : ""}${x}`));
+    L.push(`성찰: ${plainSentence(s)}`);
+    L.push(`다른 관점: ${(s.o || "").trim() || "(미작성)"}`);
+    L.push(`스스로 점검: ${CRITERIA.map((c, i) => (s.chk.includes(i) ? "☑ " : "☐ ") + c[0]).join("  ")}`);
+    L.push("");
+  });
+  return L.join("\n");
+}
+function report(w) {
+  const p = el("section", "panel");
+  p.innerHTML = `<div class="panel-head"><div class="panel-title">내 성찰 보고서</div><div class="panel-desc">작성한 활동이 자동으로 모입니다. 복사하거나 파일로 저장해 선생님이 안내한 곳에 제출하세요.</div></div>`;
+  const b = el("div", "panel-body stack"); p.appendChild(b); w.appendChild(p);
+  const nr = el("div", "name-row", `<label for="nm" style="font-weight:800;font-size:13px">이름</label><input id="nm" type="text" maxlength="30" placeholder="학번 이름">`);
+  b.appendChild(nr);
+  const nm = $("input", nr); nm.value = S.name || "";
+  const box = el("div", "report"); b.appendChild(box);
+  const refresh = () => { box.textContent = reportText(); };
+  nm.oninput = () => { S.name = nm.value; save(); refresh(); };
+  refresh();
+  const act = el("div", "row"); b.appendChild(act);
+  const cp = el("button", "btn primary", "보고서 복사"); cp.type = "button";
+  cp.onclick = () => {
+    const txt = reportText();
+    const fallback = () => { const r = document.createRange(); r.selectNodeContents(box); const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r); toast("글을 선택했어요. 복사해서 쓰세요"); };
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(txt).then(() => toast("보고서를 복사했어요"), fallback); else fallback();
+  };
+  const dl = el("button", "btn", "텍스트 파일로 저장"); dl.type = "button";
+  dl.onclick = () => {
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([reportText()], { type: "text/plain;charset=utf-8" }));
+    a.download = `TOK_성찰_${(S.name || "이름없음").trim().replace(/[\\/:*?"<>|\s]+/g, "_")}.txt`;
+    document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  };
+  const clr = el("button", "btn danger", "모든 기록 지우기"); clr.type = "button";
+  clr.onclick = () => { if (!confirm("이 브라우저에 저장된 TOK 실험 기록과 성찰을 모두 지울까요? 되돌릴 수 없어요.")) return; S = { name: "", t: {} }; save(); render(); };
+  act.append(cp, dl, clr);
+}
+
+function render() {
+  renderTabs();
+  viewEl.innerHTML = "";
+  if (view.n === "topic") { const t = TOPICS.find(x => x.id === view.id); if (t) topic(viewEl, t); else home(viewEl); }
+  else if (view.n === "bank") bank(viewEl);
+  else if (view.n === "report") report(viewEl);
+  else home(viewEl);
+}
+render();
+</script>
+</body>
+</html>
