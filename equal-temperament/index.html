@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>음계의 주파수와 로그</title>
+<!--
+  ============================================================
+  새 앱 기본 틀
+  1) 이 폴더(app-template)를 복사해 영어 폴더 이름으로 바꿉니다. 예) probability
+  2) 아래 "앱 제목", 상단 문구, "도구 전용" 영역만 바꿉니다.
+  3) site-config.js의 TOOLS에 등록하면 홈페이지에 카드가 생깁니다.
+  ※ Claude에게 맡길 때는 '연수가이드/02_프롬프트모음.md'의 [프롬프트 B]를 쓰세요.
+  ============================================================
+-->
+<style>
+  /* ===== 내 수학 실험실 공통 테마 =====
+     이 :root 블록과 아래 "공통 셸" 영역은 모든 도구가 동일하게 유지합니다.
+     도구별 CSS는 파일 아래쪽 "도구 전용" 영역에만 추가하세요. */
+  :root{
+    --bg:#f2f0e9;
+    --panel:#fbf9f3;
+    --panel-2:#f4f1e9;
+    --line:#d8d2c7;
+    --border-soft:#eee9df;
+    --text:#15171a;
+    --muted:#6b6f74;
+    --faint:#9a958a;
+    --accent:#ff5a30;
+    --accent-weak:rgba(255,90,48,.14);
+    --lime:#d9f24f;
+    --shadow:0 10px 28px rgba(21,23,26,.055);
+    --radius:16px;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    background:
+      linear-gradient(rgba(21,23,26,.035) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(21,23,26,.035) 1px, transparent 1px),
+      var(--bg);
+    background-size:34px 34px;
+    color:var(--text);
+    font-family:Pretendard,"Apple SD Gothic Neo","Noto Sans KR",-apple-system,BlinkMacSystemFont,sans-serif;
+    letter-spacing:-.015em;
+    min-height:100vh;
+    -webkit-font-smoothing:antialiased;
+  }
+  button,input,select{font:inherit;color:inherit}
+  .num{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+
+  .app{width:100%;max-width:1180px;margin:0 auto;padding:12px;display:flex;flex-direction:column;gap:10px}
+
+  /* ---- 공통 셸: 상단바 ---- */
+  .topbar{
+    min-height:72px;
+    display:flex;
+    gap:14px;
+    justify-content:space-between;
+    align-items:center;
+    padding:10px 14px;
+    background:rgba(242,240,233,.90);
+    border:1px solid var(--line);
+    border-radius:18px;
+    backdrop-filter:blur(14px);
+  }
+  .brand-area{display:flex;align-items:center;gap:18px;min-width:0}
+  .home-link{
+    display:flex;align-items:center;gap:10px;flex:none;
+    color:var(--text);text-decoration:none;
+    padding:7px 10px 7px 8px;border-radius:12px;
+    transition:background .18s ease;
+  }
+  .home-link:hover{background:#e7e3d9}
+  .home-arrow{
+    width:31px;height:31px;border:1px solid #c9c4b8;border-radius:50%;
+    display:grid;place-items:center;font-size:16px;line-height:1;background:#fbf9f3;
+  }
+  .brand-copy{display:block;line-height:1.15}
+  .brand-copy strong{display:block;font-size:14px;font-weight:800;letter-spacing:-.035em}
+  .brand-copy small{
+    display:block;margin-top:4px;color:#8a8d90;
+    font-family:ui-monospace,SFMono-Regular,Consolas,monospace;
+    font-size:7.5px;letter-spacing:.13em;white-space:nowrap;
+  }
+  .top-divider{width:1px;height:34px;background:#d3cec3;flex:none}
+  .title-row{display:block;min-width:0}
+  .eyebrow{
+    display:flex;align-items:center;gap:7px;margin-bottom:4px;
+    color:#7b7770;font-size:10px;font-weight:750;white-space:nowrap;
+  }
+  .eyebrow span{display:block;width:18px;height:2px;background:var(--accent)}
+  h1{
+    font-size:clamp(18px,1.25vw,24px);
+    margin:0;
+    font-weight:800;letter-spacing:-.04em;white-space:nowrap;
+  }
+  h1 em{
+    font-style:normal;font-weight:500;
+    background:linear-gradient(transparent 60%,var(--lime) 0);
+    padding:0 .04em;
+  }
+  .subtitle{margin:4px 0 0;color:#666b6f;font-size:11.5px}
+  .badge{
+    display:inline-flex;align-items:center;gap:7px;flex:none;
+    background:#15171a;color:#fff;border:0;
+    border-radius:999px;padding:8px 12px;font-weight:700;font-size:12px;white-space:nowrap;
+  }
+  .dot{width:9px;height:9px;border-radius:50%;background:#73c48f}
+
+  /* ---- 공통 셸: 패널 ----
+     기본은 "넓은 그림 영역 + 좁은 설정 영역" 2단입니다.
+     패널 수가 다르면 grid-template-columns만 바꾸고, 좁은 화면에서 1단으로
+     떨어지는 @media (max-width:900px) 규칙은 남겨 두세요. */
+  .workspace{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(300px,1fr);gap:10px}
+  .panel{
+    min-width:0;
+    display:flex;flex-direction:column;
+    background:rgba(251,249,243,.96);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    box-shadow:var(--shadow);
+    overflow:hidden;
+  }
+  .panel-head{
+    flex:0 0 auto;
+    padding:12px 14px;
+    border-bottom:1px solid var(--line);
+    background:rgba(247,244,236,.92);
+  }
+  .panel-title{
+    font-size:15px;font-weight:800;letter-spacing:-.025em;
+    position:relative;padding-left:10px;
+  }
+  .panel-title::before{
+    content:"";position:absolute;left:0;top:.15em;bottom:.15em;
+    width:3px;border-radius:3px;background:var(--accent);
+  }
+  .panel-desc{color:#74716b;font-size:11.5px;margin-top:5px;line-height:1.45}
+  .panel-body{flex:1;min-height:0;padding:14px}
+
+  /* ---- 공통 셸: 버튼 ---- */
+  .btn{
+    border:1px solid #c9c4b8;background:#fbf9f3;color:#15171a;
+    border-radius:999px;font-weight:700;font-size:12.5px;
+    padding:9px 14px;cursor:pointer;line-height:1;
+    transition:background .15s ease,border-color .15s ease,transform .15s ease;
+  }
+  .btn:hover:not(:disabled){transform:translateY(-1px);border-color:#15171a;background:#f2efe6}
+  .btn:disabled{opacity:.4;cursor:not-allowed;transform:none}
+  .btn.primary{background:#15171a;color:#fff;border-color:#15171a}
+  .btn.primary:hover:not(:disabled){background:#2b2e31}
+  .btn.danger{color:#a73b2c}
+  .btn.icon-btn{width:38px;height:38px;padding:0;border-radius:10px;font-size:18px;display:grid;place-items:center}
+
+  /* ---- 공통 셸: 그림 영역 (캔버스·SVG) ---- */
+  .chart-wrap{background:#fff;border:1px solid #e3ded4;border-radius:12px;overflow:hidden;position:relative}
+  .chart-wrap canvas,.chart-wrap svg{display:block;width:100%;height:100%}
+
+  /* ---- 공통 셸: 입력·지표·안내 (쓰지 않는 것은 지우세요) ---- */
+  .controls{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+  .control{display:flex;flex-direction:column;gap:5px}
+  .control label{font-size:11px;color:var(--muted);font-weight:800}
+  .control input{
+    width:100%;padding:9px 10px;font-weight:700;
+    border:1px solid #d3cec3;background:#fff;color:var(--text);border-radius:10px;
+  }
+  .control input:focus{outline:3px solid rgba(217,242,79,.42);border-color:#9aa64b}
+  .control input[type="range"]{
+    padding:0;height:22px;border:0;border-radius:0;background:transparent;
+    accent-color:#15171a;cursor:pointer;
+  }
+  .checkbox-control{
+    justify-content:center;min-height:58px;padding:8px 10px;
+    border:1px solid var(--line);background:var(--panel-2);border-radius:12px;
+  }
+  .checkbox-control label{display:flex;align-items:center;gap:8px;color:var(--text);cursor:pointer;font-size:11px}
+  .checkbox-control input{width:17px;height:17px;padding:0;accent-color:#15171a;cursor:pointer}
+
+  .metrics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+  .metric{background:var(--panel-2);border:1px solid #ddd7cc;border-radius:11px;padding:8px 9px;min-width:0}
+  .metric .label{color:#77736d;font-size:10px;font-weight:800;margin-bottom:3px}
+  .metric .value{
+    font-size:15px;font-weight:850;color:var(--text);
+    font-variant-numeric:tabular-nums;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  }
+
+  .formula{
+    background:#15171a;color:#f6f2e9;border:1px solid #15171a;border-radius:12px;
+    padding:9px 10px;line-height:1.55;font-size:12px;
+    font-family:ui-monospace,SFMono-Regular,Consolas,monospace;overflow:auto;
+  }
+  .note{
+    padding:10px 12px;border-radius:10px;
+    background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;
+    font-size:11px;line-height:1.5;
+  }
+  .note b{color:#7c2d12;font-weight:800}
+  .status{min-height:19px;font-size:11px;line-height:1.4;font-weight:750;color:var(--muted)}
+  .status.ok{color:#32724f}
+  .status.error{color:#b44634}
+
+  .legend{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center}
+  .legend-item{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--muted)}
+  .legend-item i{width:11px;height:11px;border-radius:3px;flex:none}
+
+  /* ---- 공통 셸: 반응형 (이 3개 블록은 그대로 유지) ----
+     주의: .topbar에 align-items:stretch를 쓰면 알약 모양 .badge가
+     줄바꿈된 제목 높이만큼 세로로 늘어나 거대한 원처럼 깨집니다. */
+  @media (max-width:1080px){
+    .brand-copy small{display:none}
+    .brand-copy strong{font-size:13px}
+    .top-divider{height:28px}
+  }
+  @media (max-width:900px){
+    .workspace{grid-template-columns:1fr}
+  }
+  @media (max-width:820px){
+    .topbar{align-items:flex-start}
+    .brand-area{align-items:flex-start}
+    .home-link{padding-left:2px}
+    .top-divider{display:none}
+    .brand-copy{display:none}
+    .title-row{display:block}
+    h1{white-space:normal}
+    .eyebrow{white-space:normal}
+    .badge{display:none}
+  }
+  @media (max-width:520px){
+    .app{padding:7px}
+    .topbar{border-radius:14px;padding:9px 10px}
+    .home-arrow{width:34px;height:34px}
+    h1{font-size:20px;line-height:1.25}
+    .subtitle{font-size:11px;white-space:normal}
+    .panel{border-radius:14px}
+    .panel-head{padding:12px}
+    .btn{min-height:40px}
+    .controls{grid-template-columns:1fr}
+  }
+
+
+  /* ===== 도구 전용 CSS는 여기부터 ===== */
+  .piano{position:relative;height:150px;user-select:none;-webkit-user-select:none;touch-action:manipulation}
+  .wk,.bk{position:absolute;top:0;border:1px solid #15171a;cursor:pointer;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;
+          font-size:10px;font-weight:800;padding-bottom:6px;transition:background .08s}
+  .wk{height:100%;background:#fff;border-radius:0 0 7px 7px;color:#6b6f74;z-index:1}
+  .bk{height:60%;background:#15171a;border-radius:0 0 5px 5px;color:#bdb8ad;z-index:2;font-size:9px;padding-bottom:4px}
+  .wk.sel{background:#ffd2c4;color:#15171a}
+  .bk.sel{background:#ff5a30;color:#fff}
+  .wk.pair{background:#dfe9fb}
+  .bk.pair{background:#2f6fd6;color:#fff}
+  .wk.on,.bk.on{filter:brightness(.85)}
+  .wk .a4{display:block;width:6px;height:6px;border-radius:50%;background:var(--accent);margin-bottom:3px}
+  .stage{aspect-ratio:16/9}
+  .range-row{display:flex;justify-content:space-between;align-items:baseline}
+  .range-row b{font-size:13px}
+  .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .seg{display:inline-flex;border:1px solid #c9c4b8;border-radius:999px;overflow:hidden;background:#fbf9f3}
+  .seg button{border:0;background:transparent;padding:8px 12px;font-size:12px;font-weight:700;cursor:pointer}
+  .seg button.on{background:#15171a;color:#fff}
+  table.steps{width:100%;border-collapse:collapse;font-size:11.5px}
+  table.steps th,table.steps td{padding:5px 6px;border-bottom:1px solid var(--border-soft);text-align:right;font-variant-numeric:tabular-nums}
+  table.steps th{color:var(--muted);font-weight:800;background:var(--panel-2);position:sticky;top:0}
+  table.steps th:first-child,table.steps td:first-child{text-align:center}
+  table.steps tr.cur td{background:var(--accent-weak);font-weight:800}
+  table.steps tr{cursor:pointer}
+  .table-wrap{max-height:230px;overflow:auto;border:1px solid var(--line);border-radius:10px;background:#fff}
+  .freq-in{display:flex;gap:8px;align-items:center}
+  .freq-in input{width:110px;padding:9px 10px;font-weight:800;border:1px solid #d3cec3;background:#fff;border-radius:10px}
+  details.explain summary{cursor:pointer;font-weight:800;font-size:12.5px}
+  details.explain p{font-size:12px;line-height:1.7;color:#3d4044;margin:8px 0 0}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="topbar">
+    <div class="brand-area">
+      <!-- 홈으로 돌아가는 링크: ../#tools 를 바꾸지 마세요 -->
+      <a class="home-link" href="../#tools" aria-label="메인으로">
+        <span class="home-arrow">←</span>
+        <span class="brand-copy">
+          <strong data-site="name">내 수학 실험실</strong>
+          <small data-site="englishName">MATHEMATICS LABORATORY</small>
+        </span>
+      </a>
+      <span class="top-divider" aria-hidden="true"></span>
+      <div class="title-row">
+        <div class="eyebrow"><span></span>대수 · 등비수열 · 지수와 로그</div>
+        <h1>음계의 주파수와 <em>로그</em> (평균율)</h1>
+        <p class="subtitle">반음이 하나 올라갈 때마다 주파수가 ¹²√2배가 되는 원리를 등비수열과 로그로 탐구합니다.</p>
+      </div>
+    </div>
+    <div class="badge"><span class="dot"></span><span id="stateBadge">라(A4) 440 Hz</span></div>
+  </div>
+
+  <div class="workspace">
+    <section class="panel">
+      <div class="panel-head">
+        <div class="panel-title">건반과 주파수 그래프</div>
+        <div class="panel-desc">건반을 누르면 소리가 나고 그 음이 선택됩니다. 기준음은 라(A4) = 440 Hz이고, n은 라에서 몇 반음 떨어져 있는지를 뜻합니다.</div>
+      </div>
+      <div class="panel-body" style="display:flex;flex-direction:column;gap:12px">
+        <div class="piano" id="piano" aria-label="피아노 건반 (도4 ~ 도6)"></div>
+        <div class="row">
+          <div class="seg" role="group" aria-label="세로축 눈금">
+            <button type="button" id="scLin" class="on">주파수 f (Hz)</button>
+            <button type="button" id="scLog">log₂ f (로그 눈금)</button>
+          </div>
+          <button class="btn" id="scaleBtn" type="button">▶ 선택한 음부터 한 옥타브 듣기</button>
+        </div>
+        <div class="chart-wrap stage"><canvas id="cv"></canvas></div>
+        <div class="legend">
+          <span class="legend-item"><i style="background:#9a958a"></i>건반 25개의 주파수</span>
+          <span class="legend-item"><i style="background:#ff5a30"></i>선택한 음</span>
+          <span class="legend-item"><i style="background:#2f6fd6"></i>음정의 위쪽 음</span>
+          <span class="legend-item" id="lineLegend"><i style="background:#15171a;height:2px"></i>f = 440·2ⁿᐟ¹²</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head">
+        <div class="panel-title">등비수열과 로그로 계산하기</div>
+        <div class="panel-desc">공비 r = ¹²√2 = 2^(1/12) ≈ 1.05946</div>
+      </div>
+      <div class="panel-body" style="display:flex;flex-direction:column;gap:12px">
+        <div class="metrics">
+          <div class="metric"><div class="label">선택한 음</div><div class="value" id="mName">라 A4</div></div>
+          <div class="metric"><div class="label">라(A4)에서 반음 n</div><div class="value num" id="mN">0</div></div>
+          <div class="metric"><div class="label">주파수 f = 440·rⁿ</div><div class="value num" id="mF">440</div></div>
+          <div class="metric"><div class="label">log₂(f / 440) = n / 12</div><div class="value num" id="mLog">0</div></div>
+        </div>
+        <div class="formula" id="formula"></div>
+
+        <div class="control">
+          <div class="range-row"><label for="kRange">음정: 선택한 음에서 위로 k 반음</label><b class="num" id="kVal">7 (완전5도)</b></div>
+          <input id="kRange" type="range" min="0" max="12" step="1" value="7">
+        </div>
+        <div class="formula" id="intv"></div>
+        <button class="btn" id="pairBtn" type="button">▶ 두 음 함께 듣기</button>
+
+        <div class="control">
+          <label for="fIn">거꾸로: 주파수를 넣으면 몇 반음일까? (n = 12·log₂(f / 440))</label>
+          <div class="freq-in"><input id="fIn" type="number" min="20" max="5000" step="1" value="1000" aria-label="주파수(Hz)"><span style="font-size:12px;color:var(--muted)">Hz</span></div>
+        </div>
+        <div class="formula" id="inv"></div>
+
+        <div class="table-wrap">
+          <table class="steps">
+            <thead><tr><th>음</th><th>n</th><th>주파수 (Hz)</th><th>앞 음과의 비</th></tr></thead>
+            <tbody id="tbody"></tbody>
+          </table>
+        </div>
+
+        <details class="explain">
+          <summary>왜 ¹²√2일까?</summary>
+          <p>한 옥타브 위의 음은 주파수가 정확히 2배입니다. 평균율은 이 한 옥타브를 반음 12개로 나누되, 이웃한 두 음의 주파수 <b>비</b>가 모두 같도록 정합니다.</p>
+          <p>공비를 r라 하면 반음 12개를 오른 뒤 2배가 되어야 하므로 r¹² = 2, 즉 r = 2^(1/12)입니다. 그래서 주파수는 첫째항 440, 공비 2^(1/12)인 <b>등비수열</b> fₙ = 440·2^(n/12)을 이룹니다.</p>
+          <p>양변에 밑이 2인 로그를 취하면 log₂ fₙ = log₂ 440 + n/12. 주파수의 로그는 n에 대한 <b>일차식</b>이 되어, 로그 눈금 그래프에서는 기울기 1/12인 직선으로 보입니다. 우리 귀도 주파수의 차가 아니라 비를 같은 ‘음정’으로 느낍니다.</p>
+        </details>
+
+        <div class="note"><b>관찰 질문</b> ① 반음 7개(완전5도)의 비 2^(7/12)는 3/2와 얼마나 다를까요? ② 주파수 그래프에서 이웃한 점 사이의 간격은 일정한가요? 로그 눈금으로 바꾸면 어떻게 보이나요?</div>
+      </div>
+    </section>
+  </div>
+</div>
+
+<!-- 홈페이지 이름을 site-config.js에서 가져와 상단에 표시합니다 -->
+<script src="../site-config.js"></script>
+<script>
+  if (typeof SITE !== "undefined") {
+    document.querySelectorAll("[data-site]").forEach(el => {
+      if (SITE[el.dataset.site]) el.textContent = SITE[el.dataset.site];
+    });
+  }
+</script>
+<script>
+  // ===== 도구 전용 JavaScript는 여기부터 =====
+  const $ = id => document.getElementById(id);
+  const R = Math.pow(2, 1 / 12);
+  const SOL = ["도", "도#", "레", "레#", "미", "파", "파#", "솔", "솔#", "라", "라#", "시"];
+  const LET = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
+  const BLACK = [1, 3, 6, 8, 10];
+  // 도4(n = −9)부터 도6(n = 15)까지 25개 건반. n = 라(A4)에서의 반음 수
+  const KEYS = [];
+  for (let n = -9; n <= 15; n++) {
+    const m = ((n + 9) % 12 + 12) % 12, oct = 4 + Math.floor((n + 9) / 12);
+    KEYS.push({ n, sol: SOL[m], name: LET[m] + oct, black: BLACK.includes(m), f: 440 * Math.pow(2, n / 12) });
+  }
+  const keyOf = n => KEYS.find(k => k.n === n);
+  const INTV = ["완전1도(같은 음)", "단2도", "장2도", "단3도", "장3도", "완전4도", "증4도", "완전5도", "단6도", "장6도", "단7도", "장7도", "완전8도(옥타브)"];
+  const PURE = { 0: [1, 1], 3: [6, 5], 4: [5, 4], 5: [4, 3], 7: [3, 2], 8: [8, 5], 9: [5, 3], 12: [2, 1] };
+  const state = { n: 0, k: 7, log: false };
+  const fmt = (v, d = 2) => { const p = 10 ** d; let r = Math.round(v * p) / p; if (Object.is(r, -0)) r = 0; return r.toLocaleString("ko-KR", { maximumFractionDigits: d }); };
+  const label = k => `${k.sol} ${k.name}`;
+
+  /* ---------- 소리 ---------- */
+  let AC = null;
+  function tone(f, t0 = 0, dur = 0.7) {
+    try {
+      if (!AC) AC = new (window.AudioContext || window.webkitAudioContext)();
+      if (AC.state === "suspended") AC.resume();
+      const o = AC.createOscillator(), g = AC.createGain(), s = AC.currentTime + t0;
+      o.type = "triangle"; o.frequency.value = f;
+      g.gain.setValueAtTime(0, s); g.gain.linearRampToValueAtTime(0.28, s + 0.02); g.gain.exponentialRampToValueAtTime(0.001, s + dur);
+      o.connect(g).connect(AC.destination); o.start(s); o.stop(s + dur + 0.05);
+    } catch (e) {}
+  }
+
+  /* ---------- 건반 ---------- */
+  const piano = $("piano");
+  function buildPiano() {
+    piano.innerHTML = "";
+    const whites = KEYS.filter(k => !k.black), W = 100 / whites.length;
+    let wi = 0;
+    KEYS.forEach(k => {
+      const d = document.createElement("div");
+      d.className = k.black ? "bk" : "wk";
+      if (k.black) { d.style.left = (wi * W - W * 0.32) + "%"; d.style.width = (W * 0.64) + "%"; }
+      else { d.style.left = (wi * W) + "%"; d.style.width = W + "%"; wi++; }
+      d.dataset.n = k.n;
+      d.setAttribute("role", "button"); d.setAttribute("aria-label", `${label(k)} ${fmt(k.f)} Hz`);
+      d.innerHTML = (k.n === 0 ? '<span class="a4" title="기준음 A4 = 440 Hz"></span>' : "") + (k.black ? "" : k.sol);
+      d.addEventListener("pointerdown", e => { e.preventDefault(); select(k.n); tone(k.f); d.classList.add("on"); setTimeout(() => d.classList.remove("on"), 150); });
+      piano.appendChild(d);
+    });
+  }
+  function markPiano() {
+    const up = state.n + state.k;
+    piano.querySelectorAll("[data-n]").forEach(d => {
+      const n = +d.dataset.n;
+      d.classList.toggle("sel", n === state.n);
+      d.classList.toggle("pair", state.k > 0 && n === up);
+    });
+  }
+
+  /* ---------- 그래프 ---------- */
+  const cv = $("cv"), ctx = cv.getContext("2d");
+  function draw() {
+    const r = cv.getBoundingClientRect(), dpr = window.devicePixelRatio || 1;
+    const w = Math.max(1, Math.round(r.width * dpr)), h = Math.max(1, Math.round(r.height * dpr));
+    if (cv.width !== w || cv.height !== h) { cv.width = w; cv.height = h; }
+    const c = ctx; c.setTransform(1, 0, 0, 1, 0, 0); c.clearRect(0, 0, w, h);
+    const L = 52 * dpr, Rr = 12 * dpr, T = 12 * dpr, B = 30 * dpr;
+    const yv = f => state.log ? Math.log2(f) : f;
+    const ymin = state.log ? Math.log2(240) : 0, ymax = state.log ? Math.log2(1150) : 1100;
+    const X = n => L + (n + 10) / 26 * (w - L - Rr), Y = v => T + (ymax - v) / (ymax - ymin) * (h - T - B);
+    c.font = `${10 * dpr}px ui-monospace,Consolas,monospace`; c.lineWidth = dpr;
+    // 세로 격자: 옥타브(도) 위치
+    c.textAlign = "center"; c.textBaseline = "top";
+    for (let n = -9; n <= 15; n += 3) { c.strokeStyle = "#efebe2"; c.beginPath(); c.moveTo(X(n), T); c.lineTo(X(n), h - B); c.stroke(); c.fillStyle = "#9a958a"; c.fillText(n, X(n), h - B + 5 * dpr); }
+    c.fillText("n (라에서의 반음 수)", (L + w - Rr) / 2, h - B + 17 * dpr);
+    // 가로 격자
+    c.textAlign = "right"; c.textBaseline = "middle";
+    const ticks = state.log ? [8, 8.5, 9, 9.5, 10] : [0, 200, 400, 600, 800, 1000];   // 로그 눈금: log₂ f 값 (2⁸ = 256 Hz, 2¹⁰ = 1024 Hz)
+    ticks.forEach(t => { const y = Y(t); c.strokeStyle = "#efebe2"; c.beginPath(); c.moveTo(L, y); c.lineTo(w - Rr, y); c.stroke(); c.fillStyle = "#9a958a";
+      c.fillText(String(t), L - 6 * dpr, y); });
+    if (state.log) { c.save(); c.fillStyle = "#9a958a"; c.textAlign = "left"; c.textBaseline = "top"; c.fillText("log₂ f", L + 4 * dpr, T + 2 * dpr); c.restore(); }
+    else { c.save(); c.fillStyle = "#9a958a"; c.textAlign = "left"; c.textBaseline = "top"; c.fillText("f (Hz)", L + 4 * dpr, T + 2 * dpr); c.restore(); }
+    // 연속 곡선 f = 440·2^(n/12)
+    c.strokeStyle = "rgba(21,23,26,.55)"; c.lineWidth = 1.6 * dpr; c.beginPath();
+    for (let i = 0; i <= 200; i++) { const n = -9.5 + 25 * i / 200, v = yv(440 * Math.pow(2, n / 12)); i ? c.lineTo(X(n), Y(v)) : c.moveTo(X(n), Y(v)); }
+    c.stroke();
+    // 점
+    KEYS.forEach(k => { c.beginPath(); c.arc(X(k.n), Y(yv(k.f)), 3.5 * dpr, 0, 7); c.fillStyle = "#9a958a"; c.fill(); });
+    const up = keyOf(state.n + state.k);
+    const mark = (k, col) => {
+      const x = X(k.n), y = Y(yv(k.f));
+      c.setLineDash([4 * dpr, 4 * dpr]); c.strokeStyle = col; c.lineWidth = dpr;
+      c.beginPath(); c.moveTo(x, y); c.lineTo(x, h - B); c.moveTo(x, y); c.lineTo(L, y); c.stroke(); c.setLineDash([]);
+      c.beginPath(); c.arc(x, y, 6.5 * dpr, 0, 7); c.fillStyle = col; c.fill(); c.strokeStyle = "#fff"; c.lineWidth = 2 * dpr; c.stroke();
+      c.fillStyle = col; c.font = `800 ${11 * dpr}px sans-serif`; c.textAlign = "left"; c.textBaseline = "bottom";
+      c.fillText(`${k.sol} ${fmt(k.f, 1)} Hz`, Math.min(x + 8 * dpr, w - 90 * dpr), y - 6 * dpr);
+    };
+    if (up && state.k > 0) mark(up, "#2f6fd6");
+    mark(keyOf(state.n), "#ff5a30");
+  }
+
+  /* ---------- 계산 ---------- */
+  const sup = n => String(n).replace(/-/g, "⁻").replace(/\d/g, d => "⁰¹²³⁴⁵⁶⁷⁸⁹"[d]);
+  function update() {
+    const k = keyOf(state.n);
+    $("mName").textContent = label(k);
+    $("mN").textContent = state.n;
+    $("mF").textContent = fmt(k.f, 2) + " Hz";
+    $("mLog").textContent = `${state.n}/12 = ${fmt(state.n / 12, 4)}`;
+    $("stateBadge").textContent = `${label(k)} ${fmt(k.f, 1)} Hz`;
+    $("formula").innerHTML =
+      `f<sub>n</sub> = 440 × r<sup>n</sup> = 440 × 2<sup>${state.n}/12</sup> ≈ <b>${fmt(k.f, 2)} Hz</b><br>` +
+      `log₂ f = log₂ 440 + n/12 = ${fmt(Math.log2(440), 4)} + ${fmt(state.n / 12, 4)} = ${fmt(Math.log2(k.f), 4)}`;
+    // 음정
+    const up = keyOf(state.n + state.k), ratio = Math.pow(2, state.k / 12);
+    $("kVal").textContent = `${state.k} (${INTV[state.k]})`;
+    let h = `비 = r<sup>${state.k}</sup> = 2<sup>${state.k}/12</sup> ≈ <b>${fmt(ratio, 5)}</b>`;
+    h += up ? `<br>${k.sol}(${fmt(k.f, 1)} Hz) → ${up.sol} ${up.name}(${fmt(up.f, 1)} Hz)` : `<br><span style="color:#ffb199">위쪽 음이 건반 범위(도6)를 넘습니다. 더 낮은 음을 고르세요.</span>`;
+    if (PURE[state.k] && state.k % 12) {
+      const [a, b] = PURE[state.k], pr = a / b, cents = 1200 * Math.log2(ratio / pr);
+      h += `<br>순정률(정수비) ${a}/${b} = ${fmt(pr, 5)} · 차이 ${fmt(ratio - pr, 5)} (${cents > 0 ? "+" : ""}${fmt(cents, 1)}센트)`;
+    }
+    $("intv").innerHTML = h;
+    $("pairBtn").disabled = !up || state.k === 0;
+    // 표
+    $("tbody").innerHTML = KEYS.map((x, i) => `<tr data-n="${x.n}" class="${x.n === state.n ? "cur" : ""}"><td>${x.sol} <span style="color:var(--muted)">${x.name}</span></td><td>${x.n}</td><td>${fmt(x.f, 2)}</td><td>${i ? "× " + fmt(x.f / KEYS[i - 1].f, 5) : "—"}</td></tr>`).join("");
+    markPiano(); draw();
+  }
+  function updateInv() {
+    const f = +$("fIn").value;
+    if (!(f > 0)) { $("inv").textContent = "0보다 큰 주파수를 넣으세요."; return; }
+    const n = 12 * Math.log2(f / 440), nr = Math.round(n), m = ((nr + 9) % 12 + 12) % 12, oct = 4 + Math.floor((nr + 9) / 12);
+    const near = 440 * Math.pow(2, nr / 12);
+    $("inv").innerHTML = `n = 12 × log₂(${fmt(f, 2)} / 440) = 12 × ${fmt(Math.log2(f / 440), 4)} ≈ <b>${fmt(n, 2)}</b><br>` +
+      `가장 가까운 음: n = ${nr} → ${SOL[m]} ${LET[m]}${oct} (${fmt(near, 2)} Hz), 차이 ${fmt(1200 * Math.log2(f / near), 1)}센트`;
+  }
+  function select(n) { state.n = n; update(); }
+
+  /* ---------- 이벤트 ---------- */
+  $("kRange").addEventListener("input", e => { state.k = +e.target.value; update(); });
+  $("pairBtn").addEventListener("click", () => { const a = keyOf(state.n), b = keyOf(state.n + state.k); if (!b) return; tone(a.f, 0, 1.4); tone(b.f, 0, 1.4); });
+  $("scaleBtn").addEventListener("click", () => {
+    const start = state.n;
+    for (let i = 0; i <= 12; i++) { const f = 440 * Math.pow(2, (start + i) / 12); tone(f, i * 0.28, 0.45); }
+  });
+  $("fIn").addEventListener("input", updateInv);
+  $("tbody").addEventListener("click", e => { const tr = e.target.closest("tr[data-n]"); if (!tr) return; const k = keyOf(+tr.dataset.n); select(k.n); tone(k.f); });
+  const setScale = log => { state.log = log; $("scLin").classList.toggle("on", !log); $("scLog").classList.toggle("on", log);
+    $("lineLegend").innerHTML = log ? '<i style="background:#15171a;height:2px"></i>log₂ f = log₂ 440 + n/12 (직선)' : '<i style="background:#15171a;height:2px"></i>f = 440·2ⁿᐟ¹²'; draw(); };
+  $("scLin").addEventListener("click", () => setScale(false));
+  $("scLog").addEventListener("click", () => setScale(true));
+  new ResizeObserver(draw).observe(cv);
+
+  buildPiano(); update(); updateInv();
+</script>
+</body>
+</html>
