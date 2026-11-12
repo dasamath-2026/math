@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>대구학습법 실천 지표</title>
+<!--
+  ============================================================
+  새 앱 기본 틀
+  1) 이 폴더(app-template)를 복사해 영어 폴더 이름으로 바꿉니다. 예) probability
+  2) 아래 "앱 제목", 상단 문구, "도구 전용" 영역만 바꿉니다.
+  3) site-config.js의 TOOLS에 등록하면 홈페이지에 카드가 생깁니다.
+  ※ Claude에게 맡길 때는 '연수가이드/02_프롬프트모음.md'의 [프롬프트 B]를 쓰세요.
+  ============================================================
+-->
+<style>
+  /* ===== 내 수학 실험실 공통 테마 =====
+     이 :root 블록과 아래 "공통 셸" 영역은 모든 도구가 동일하게 유지합니다.
+     도구별 CSS는 파일 아래쪽 "도구 전용" 영역에만 추가하세요. */
+  :root{
+    --bg:#f2f0e9;
+    --panel:#fbf9f3;
+    --panel-2:#f4f1e9;
+    --line:#d8d2c7;
+    --border-soft:#eee9df;
+    --text:#15171a;
+    --muted:#6b6f74;
+    --faint:#9a958a;
+    --accent:#ff5a30;
+    --accent-weak:rgba(255,90,48,.14);
+    --lime:#d9f24f;
+    --shadow:0 10px 28px rgba(21,23,26,.055);
+    --radius:16px;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    background:
+      linear-gradient(rgba(21,23,26,.035) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(21,23,26,.035) 1px, transparent 1px),
+      var(--bg);
+    background-size:34px 34px;
+    color:var(--text);
+    font-family:Pretendard,"Apple SD Gothic Neo","Noto Sans KR",-apple-system,BlinkMacSystemFont,sans-serif;
+    letter-spacing:-.015em;
+    min-height:100vh;
+    -webkit-font-smoothing:antialiased;
+  }
+  button,input,select{font:inherit;color:inherit}
+  .num{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+
+  .app{width:100%;max-width:1180px;margin:0 auto;padding:12px;display:flex;flex-direction:column;gap:10px}
+
+  /* ---- 공통 셸: 상단바 ---- */
+  .topbar{
+    min-height:72px;
+    display:flex;
+    gap:14px;
+    justify-content:space-between;
+    align-items:center;
+    padding:10px 14px;
+    background:rgba(242,240,233,.90);
+    border:1px solid var(--line);
+    border-radius:18px;
+    backdrop-filter:blur(14px);
+  }
+  .brand-area{display:flex;align-items:center;gap:18px;min-width:0}
+  .home-link{
+    display:flex;align-items:center;gap:10px;flex:none;
+    color:var(--text);text-decoration:none;
+    padding:7px 10px 7px 8px;border-radius:12px;
+    transition:background .18s ease;
+  }
+  .home-link:hover{background:#e7e3d9}
+  .home-arrow{
+    width:31px;height:31px;border:1px solid #c9c4b8;border-radius:50%;
+    display:grid;place-items:center;font-size:16px;line-height:1;background:#fbf9f3;
+  }
+  .brand-copy{display:block;line-height:1.15}
+  .brand-copy strong{display:block;font-size:14px;font-weight:800;letter-spacing:-.035em}
+  .brand-copy small{
+    display:block;margin-top:4px;color:#8a8d90;
+    font-family:ui-monospace,SFMono-Regular,Consolas,monospace;
+    font-size:7.5px;letter-spacing:.13em;white-space:nowrap;
+  }
+  .top-divider{width:1px;height:34px;background:#d3cec3;flex:none}
+  .title-row{display:block;min-width:0}
+  .eyebrow{
+    display:flex;align-items:center;gap:7px;margin-bottom:4px;
+    color:#7b7770;font-size:10px;font-weight:750;white-space:nowrap;
+  }
+  .eyebrow span{display:block;width:18px;height:2px;background:var(--accent)}
+  h1{
+    font-size:clamp(18px,1.25vw,24px);
+    margin:0;
+    font-weight:800;letter-spacing:-.04em;white-space:nowrap;
+  }
+  h1 em{
+    font-style:normal;font-weight:500;
+    background:linear-gradient(transparent 60%,var(--lime) 0);
+    padding:0 .04em;
+  }
+  .subtitle{margin:4px 0 0;color:#666b6f;font-size:11.5px}
+  .badge{
+    display:inline-flex;align-items:center;gap:7px;flex:none;
+    background:#15171a;color:#fff;border:0;
+    border-radius:999px;padding:8px 12px;font-weight:700;font-size:12px;white-space:nowrap;
+  }
+  .dot{width:9px;height:9px;border-radius:50%;background:#73c48f}
+
+  /* ---- 공통 셸: 패널 ----
+     기본은 "넓은 그림 영역 + 좁은 설정 영역" 2단입니다.
+     패널 수가 다르면 grid-template-columns만 바꾸고, 좁은 화면에서 1단으로
+     떨어지는 @media (max-width:900px) 규칙은 남겨 두세요. */
+  .workspace{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(300px,1fr);gap:10px}
+  .panel{
+    min-width:0;
+    display:flex;flex-direction:column;
+    background:rgba(251,249,243,.96);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    box-shadow:var(--shadow);
+    overflow:hidden;
+  }
+  .panel-head{
+    flex:0 0 auto;
+    padding:12px 14px;
+    border-bottom:1px solid var(--line);
+    background:rgba(247,244,236,.92);
+  }
+  .panel-title{
+    font-size:15px;font-weight:800;letter-spacing:-.025em;
+    position:relative;padding-left:10px;
+  }
+  .panel-title::before{
+    content:"";position:absolute;left:0;top:.15em;bottom:.15em;
+    width:3px;border-radius:3px;background:var(--accent);
+  }
+  .panel-desc{color:#74716b;font-size:11.5px;margin-top:5px;line-height:1.45}
+  .panel-body{flex:1;min-height:0;padding:14px}
+
+  /* ---- 공통 셸: 버튼 ---- */
+  .btn{
+    border:1px solid #c9c4b8;background:#fbf9f3;color:#15171a;
+    border-radius:999px;font-weight:700;font-size:12.5px;
+    padding:9px 14px;cursor:pointer;line-height:1;
+    transition:background .15s ease,border-color .15s ease,transform .15s ease;
+  }
+  .btn:hover:not(:disabled){transform:translateY(-1px);border-color:#15171a;background:#f2efe6}
+  .btn:disabled{opacity:.4;cursor:not-allowed;transform:none}
+  .btn.primary{background:#15171a;color:#fff;border-color:#15171a}
+  .btn.primary:hover:not(:disabled){background:#2b2e31}
+  .btn.danger{color:#a73b2c}
+  .btn.icon-btn{width:38px;height:38px;padding:0;border-radius:10px;font-size:18px;display:grid;place-items:center}
+
+  /* ---- 공통 셸: 그림 영역 (캔버스·SVG) ---- */
+  .chart-wrap{background:#fff;border:1px solid #e3ded4;border-radius:12px;overflow:hidden;position:relative}
+  .chart-wrap canvas,.chart-wrap svg{display:block;width:100%;height:100%}
+
+  /* ---- 공통 셸: 입력·지표·안내 (쓰지 않는 것은 지우세요) ---- */
+  .controls{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+  .control{display:flex;flex-direction:column;gap:5px}
+  .control label{font-size:11px;color:var(--muted);font-weight:800}
+  .control input{
+    width:100%;padding:9px 10px;font-weight:700;
+    border:1px solid #d3cec3;background:#fff;color:var(--text);border-radius:10px;
+  }
+  .control input:focus{outline:3px solid rgba(217,242,79,.42);border-color:#9aa64b}
+  .control input[type="range"]{
+    padding:0;height:22px;border:0;border-radius:0;background:transparent;
+    accent-color:#15171a;cursor:pointer;
+  }
+  .checkbox-control{
+    justify-content:center;min-height:58px;padding:8px 10px;
+    border:1px solid var(--line);background:var(--panel-2);border-radius:12px;
+  }
+  .checkbox-control label{display:flex;align-items:center;gap:8px;color:var(--text);cursor:pointer;font-size:11px}
+  .checkbox-control input{width:17px;height:17px;padding:0;accent-color:#15171a;cursor:pointer}
+
+  .metrics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+  .metric{background:var(--panel-2);border:1px solid #ddd7cc;border-radius:11px;padding:8px 9px;min-width:0}
+  .metric .label{color:#77736d;font-size:10px;font-weight:800;margin-bottom:3px}
+  .metric .value{
+    font-size:15px;font-weight:850;color:var(--text);
+    font-variant-numeric:tabular-nums;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  }
+
+  .formula{
+    background:#15171a;color:#f6f2e9;border:1px solid #15171a;border-radius:12px;
+    padding:9px 10px;line-height:1.55;font-size:12px;
+    font-family:ui-monospace,SFMono-Regular,Consolas,monospace;overflow:auto;
+  }
+  .note{
+    padding:10px 12px;border-radius:10px;
+    background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;
+    font-size:11px;line-height:1.5;
+  }
+  .note b{color:#7c2d12;font-weight:800}
+  .status{min-height:19px;font-size:11px;line-height:1.4;font-weight:750;color:var(--muted)}
+  .status.ok{color:#32724f}
+  .status.error{color:#b44634}
+
+  .legend{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center}
+  .legend-item{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--muted)}
+  .legend-item i{width:11px;height:11px;border-radius:3px;flex:none}
+
+  /* ---- 공통 셸: 반응형 (이 3개 블록은 그대로 유지) ----
+     주의: .topbar에 align-items:stretch를 쓰면 알약 모양 .badge가
+     줄바꿈된 제목 높이만큼 세로로 늘어나 거대한 원처럼 깨집니다. */
+  @media (max-width:1080px){
+    .brand-copy small{display:none}
+    .brand-copy strong{font-size:13px}
+    .top-divider{height:28px}
+  }
+  @media (max-width:900px){
+    .workspace{grid-template-columns:1fr}
+  }
+  @media (max-width:820px){
+    .topbar{align-items:flex-start}
+    .brand-area{align-items:flex-start}
+    .home-link{padding-left:2px}
+    .top-divider{display:none}
+    .brand-copy{display:none}
+    .title-row{display:block}
+    h1{white-space:normal}
+    .eyebrow{white-space:normal}
+    .badge{display:none}
+  }
+  @media (max-width:520px){
+    .app{padding:7px}
+    .topbar{border-radius:14px;padding:9px 10px}
+    .home-arrow{width:34px;height:34px}
+    h1{font-size:20px;line-height:1.25}
+    .subtitle{font-size:11px;white-space:normal}
+    .panel{border-radius:14px}
+    .panel-head{padding:12px}
+    .btn{min-height:40px}
+    .controls{grid-template-columns:1fr}
+  }
+
+
+  /* ===== 도구 전용 CSS는 여기부터 ===== */
+  .hero{padding:16px 18px;background:rgba(251,249,243,.96);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);display:flex;flex-direction:column;gap:12px}
+  .def{font-size:16px;line-height:1.7;font-weight:700;letter-spacing:-.03em;margin:0}
+  .def mark{background:linear-gradient(transparent 58%,var(--lime) 0);color:inherit}
+  .tiers{display:grid;grid-template-columns:1fr auto 1fr auto 1fr;gap:8px;align-items:stretch}
+  .tier{background:#fff;border:1px solid #e3ded4;border-radius:12px;padding:10px 12px}
+  .tier b{display:block;font-size:13px}
+  .tier .big{font-family:ui-monospace,Consolas,monospace;font-size:24px;font-weight:900;color:var(--accent);line-height:1.2}
+  .tier small{display:block;font-size:11.5px;color:var(--muted);line-height:1.5;margin-top:3px}
+  .arrow{display:grid;place-items:center;font-size:18px;color:#b2ada2}
+  details.explain summary{cursor:pointer;font-weight:800;font-size:12.5px}
+  details.explain ul{margin:8px 0 0;padding-left:1.2em;font-size:12.5px;line-height:1.7;color:#3d4044}
+  .skills{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px}
+  .skill{text-align:left;border:1px solid var(--line);background:#fff;border-radius:14px;padding:12px 13px;cursor:pointer;
+         display:flex;flex-direction:column;gap:6px;border-top:5px solid var(--c);transition:transform .15s,border-color .15s}
+  .skill:hover{transform:translateY(-1px);border-color:#15171a;border-top-color:var(--c)}
+  .skill.on{box-shadow:0 0 0 2px var(--c)}
+  .skill .no{font-family:ui-monospace,Consolas,monospace;font-size:11px;font-weight:900;color:var(--c)}
+  .skill .t{font-weight:900;font-size:15px;letter-spacing:-.03em}
+  .skill .d{font-size:11.5px;color:#5d6166;line-height:1.55}
+  .skill .subs{display:flex;flex-wrap:wrap;gap:4px;margin-top:auto}
+  .tag{font-size:10.5px;font-weight:800;padding:3px 7px;border-radius:999px;background:var(--panel-2);border:1px solid #ddd7cc;color:#4a4d52}
+  .chips{display:flex;gap:6px;flex-wrap:wrap}
+  .chip{border:1px solid #c9c4b8;background:#fff;border-radius:999px;padding:6px 11px;font-size:12px;font-weight:700;cursor:pointer}
+  .chip.on{background:#15171a;color:#fff;border-color:#15171a}
+  .chip .n{font-family:ui-monospace,Consolas,monospace;font-size:10.5px;opacity:.7;margin-left:3px}
+  .search{width:100%;padding:10px 12px;border:1px solid #d3cec3;border-radius:10px;background:#fff;font:inherit;font-size:13px}
+  .grp{margin-top:6px}
+  .grp-h{display:flex;gap:8px;align-items:baseline;flex-wrap:wrap;padding:8px 0 4px;border-bottom:2px solid var(--c)}
+  .grp-h b{font-size:14px}
+  .grp-h .code{font-family:ui-monospace,Consolas,monospace;font-size:11px;color:var(--c);font-weight:900}
+  .grp-d{font-size:11.5px;color:#5d6166;line-height:1.6;margin:6px 0 4px}
+  .ind{display:flex;gap:10px;align-items:flex-start;padding:9px 6px;border-bottom:1px solid var(--border-soft);cursor:pointer;border-radius:8px}
+  .ind:hover{background:#fbf9f3}
+  .ind input{width:18px;height:18px;accent-color:#15171a;flex:none;margin-top:1px;cursor:pointer}
+  .ind .code{font-family:ui-monospace,Consolas,monospace;font-size:10.5px;font-weight:800;color:#fff;background:var(--c);border-radius:6px;padding:2px 6px;flex:none;margin-top:1px;white-space:nowrap}
+  .ind .txt{font-size:13px;line-height:1.55}
+  .ind.done .txt{color:#6b6f74}
+  .meter{display:grid;grid-template-columns:86px 1fr 54px;gap:8px;align-items:center;font-size:12px;font-weight:700}
+  .meter .tr{height:12px;border-radius:6px;background:var(--panel-2);border:1px solid #ddd7cc;overflow:hidden}
+  .meter .fl{height:100%;background:var(--c);transition:width .2s}
+  .meter .v{font-family:ui-monospace,Consolas,monospace;text-align:right;color:var(--muted)}
+  .use{display:grid;gap:8px}
+  .use div{background:#fff;border:1px solid #e3ded4;border-radius:11px;padding:10px 12px;font-size:12.5px;line-height:1.65}
+  .use b{display:block;margin-bottom:3px}
+  .src{font-size:11px;color:var(--muted);line-height:1.6}
+  .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#15171a;color:#fff;padding:10px 16px;border-radius:999px;font-size:13px;font-weight:700;z-index:50}
+  .empty{padding:18px;text-align:center;color:var(--muted);font-size:13px}
+  @media (max-width:1080px){ .skills{grid-template-columns:repeat(3,minmax(0,1fr))} }
+  @media (max-width:700px){
+    .skills{grid-template-columns:repeat(2,minmax(0,1fr))}
+    .tiers{grid-template-columns:1fr}
+    .arrow{transform:rotate(90deg);height:18px}
+  }
+  @media (max-width:420px){ .skills{grid-template-columns:1fr} }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="topbar">
+    <div class="brand-area">
+      <!-- 홈으로 돌아가는 링크: ../#tools 를 바꾸지 마세요 -->
+      <a class="home-link" href="../#tools" aria-label="메인으로">
+        <span class="home-arrow">←</span>
+        <span class="brand-copy">
+          <strong data-site="name">내 수학 실험실</strong>
+          <small data-site="englishName">MATHEMATICS LABORATORY</small>
+        </span>
+      </a>
+      <span class="top-divider" aria-hidden="true"></span>
+      <div class="title-row">
+        <div class="eyebrow"><span></span>대구학습법 · 고등학교</div>
+        <h1>대구학습법과 <em>실천 지표</em></h1>
+        <p class="subtitle">배우는 방법을 배우는 5개 학습 기능, 15개 세부 기능, 고등학교 실천 지표 89개를 살펴보고 스스로 점검합니다.</p>
+      </div>
+    </div>
+    <div class="badge"><span class="dot"></span><span id="stateBadge">실천 0 / 89</span></div>
+  </div>
+
+  <!-- 1. 대구학습법이란? -->
+  <section class="hero">
+    <div class="eyebrow" style="margin:0"><span></span>대구학습법이란?</div>
+    <p class="def">의사소통 기능, 정보처리 기능, 사고 기능, 자기관리 기능, 공동체 기능의 다섯 영역을 중심으로 학생들이 지식 습득을 넘어서 <mark>자기주도적 학습자</mark>로 성장할 수 있도록, 학생들이 <mark>스스로 배우는 방법</mark>을 익히고 이를 교과 학습과 실제 생활에 적용할 수 있도록 지원하는 학습 체계</p>
+    <div class="tiers" aria-label="대구학습법의 3단계 구조">
+      <div class="tier"><b>① 학습 기능</b><span class="big">5</span><small>대구미래역량을 수업에서 구현하기 위한 가장 상위 수준의 학습 영역. 모든 교과를 관통하는 보편적 교육 목표입니다.</small></div>
+      <div class="arrow" aria-hidden="true">→</div>
+      <div class="tier"><b>② 세부 기능</b><span class="big">15</span><small>학습 기능을 인지적·메타 인지적·사회 정서적 영역으로 구체화한 학습 영역. 초·중·고 모든 학년과 교과가 함께 씁니다.</small></div>
+      <div class="arrow" aria-hidden="true">→</div>
+      <div class="tier"><b>③ 실천 지표</b><span class="big">89</span><small>학생이 실천하고 교사가 관찰할 수 있는 가장 하위의 행동 단위. 초 65개 → 중 81개 → 고 89개로 깊어집니다.</small></div>
+    </div>
+    <details class="explain">
+      <summary>왜 대구학습법인가? (배경과 필요성)</summary>
+      <ul>
+        <li>기후 위기, 글로벌 갈등, 생성형 AI로 대표되는 변동성·불확실성·복잡성·모호성(VUCA)의 시대에는 지식을 암기하고 재현하는 교육만으로는 한계가 있습니다.</li>
+        <li>OECD, UNESCO 등 국제기구는 학습 과정을 스스로 점검하고 조절하는 ‘배우는 방법 배우기’를 공교육의 최우선 과제로 강조합니다.</li>
+        <li>대구는 프로젝트 기반 학습(PBL), 국제 바칼로레아(IB, 2019년~), 대구미래학교 운영 경험을 바탕으로 모든 학교의 학생이 질 높은 학습 경험을 누릴 수 있도록 핵심 학습 기능을 마련했습니다.</li>
+        <li>대구 초·중·고 학생과 교원 20,416명 요구도 조사에서 일반학교 교원은 자기주도학습 지도의 필요성에 평균 4.58 이상, 일반학교 학생은 학습법의 필요성에 평균 4.12로 응답했습니다.</li>
+        <li>지식이 학습 내용으로서의 ‘무엇’이라면, 기능은 이를 활용하고 만들어 내는 ‘어떻게’입니다. 대구학습법은 학교의 배움이 삶의 문제 해결로 이어지는 ‘전이’를 돕습니다.</li>
+      </ul>
+    </details>
+  </section>
+
+  <!-- 2. 5개 학습 기능 -->
+  <section class="panel">
+    <div class="panel-head">
+      <div class="panel-title">5개 학습 기능과 15개 세부 기능</div>
+      <div class="panel-desc">교실에서 생각을 나누고 정보를 다루며(의사소통·정보처리) 사고를 깊게 하고(사고), 스스로를 조절하며(자기관리) 공동체에서 실천하는(공동체) 성장의 흐름입니다. 카드를 누르면 그 기능의 실천 지표만 보여 줍니다.</div>
+    </div>
+    <div class="panel-body"><div class="skills" id="skills"></div></div>
+  </section>
+
+  <!-- 3. 실천 지표 + 나의 점검 -->
+  <div class="workspace" id="indicators">
+    <section class="panel">
+      <div class="panel-head">
+        <div class="panel-title">고등학교 실천 지표 <span id="cnt" class="num" style="color:var(--muted);font-size:13px"></span></div>
+        <div class="panel-desc">이번 학기 수업에서 실천한 지표에 체크해 보세요. 실천 지표는 나의 학습을 스스로 점검하는 체크리스트가 됩니다.</div>
+      </div>
+      <div class="panel-body" style="display:flex;flex-direction:column;gap:10px">
+        <div class="chips" id="fSkill"></div>
+        <div class="chips" id="fSub"></div>
+        <input class="search" id="q" type="search" placeholder="낱말로 찾기: 예) 피드백, 그래프, 목표, AI" aria-label="실천 지표 검색">
+        <div id="list"></div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head">
+        <div class="panel-title">나의 실천 점검</div>
+        <div class="panel-desc">체크한 내용은 이 브라우저에만 저장됩니다.</div>
+      </div>
+      <div class="panel-body" style="display:flex;flex-direction:column;gap:12px">
+        <div id="meters" style="display:flex;flex-direction:column;gap:8px"></div>
+        <div class="metrics">
+          <div class="metric"><div class="label">실천한 지표</div><div class="value num" id="mDone">0 / 89</div></div>
+          <div class="metric"><div class="label">가장 많이 실천한 기능</div><div class="value" id="mBest">—</div></div>
+        </div>
+        <div class="note" id="tip"><b>다음 목표</b> 지표에 체크하면 아직 덜 실천한 기능을 알려 드립니다.</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn primary" id="copyBtn" type="button">체크한 지표 복사</button>
+          <button class="btn" id="onlyBtn" type="button">아직 안 한 지표만 보기</button>
+          <button class="btn danger" id="clearBtn" type="button">체크 모두 지우기</button>
+        </div>
+
+        <div class="panel-title" style="margin-top:4px">대구학습법 활용 방안</div>
+        <div class="use">
+          <div><b>학생은</b>실천 지표를 체크리스트로 삼아 자신의 학습을 스스로 점검하는 ‘자기주도 학습의 내비게이션’으로 활용합니다. 경청하고 공감하며 자료를 수집·가공하고, 비판적·창의적으로 문제를 해결하며, 목표와 시간을 관리하고 성찰하여 다음 학습 전략을 세웁니다.</div>
+          <div><b>교사는</b>학년별·교과별 협의로 강조할 학습 기능을 배분하고, 실천 지표로 학생의 성장 지점을 진단해 맞춤형 피드백을 줍니다. 지표를 바탕으로 탐구 활동을 설계하고, 형성평가로 기능의 적용을 관찰하며 배움의 과정을 기록합니다.</div>
+        </div>
+        <p class="src">출처: 대구광역시교육청, 「대구학습법」(대구교육 2026-247), 「대구학습법 학습 기능별 실천 지표」. 대구미래교육연구원 「학생 주도적 탐구 학습 실천을 위한 대구학습법 개발 기초 연구」(2026-034)에 기반함.</p>
+      </div>
+    </section>
+  </div>
+</div>
+
+<!-- 홈페이지 이름을 site-config.js에서 가져와 상단에 표시합니다 -->
+<script src="../site-config.js"></script>
+<script>
+  if (typeof SITE !== "undefined") {
+    document.querySelectorAll("[data-site]").forEach(el => {
+      if (SITE[el.dataset.site]) el.textContent = SITE[el.dataset.site];
+    });
+  }
+</script>
+<script>
+  // ===== 도구 전용 JavaScript는 여기부터 =====
+  const SKILLS = [
+    { no: "01", name: "의사소통 기능", c: "#ff5a30",
+      d: "존중과 공감을 바탕으로 자신의 생각을 명확히 표현하고 타인과 협력적으로 상호 작용하는 능력",
+      teach: "교사는 토의·토론, 발표, 협력 과제 등 다양한 의사소통 활동을 설계하고, 학생이 존중과 공감을 기반으로 효과적으로 소통할 수 있도록 지원합니다.",
+      subs: [
+        ["경청", "경청과 공감", "타인의 말, 글, 시각 및 문자 자료의 맥락과 의미를 주의 깊게 받아들이고 파악하며 상대방의 관점을 있는 그대로 존중하고 수용하는 능력입니다."],
+        ["표현", "논리적 표현과 전략", "자신의 생각, 감정, 의도를 구조화된 언어나 시각적 매체(글, 그림, 문자 등)를 통해 타인에게 명확하게 전달하고 상황과 목적에 맞는 적절한 소통 방식을 선택하는 능력입니다."],
+        ["협력", "협력적 상호 작용", "타인과 일방향이 아닌 쌍방향으로 끊임없이 소통하며 의견을 조율하고, 유의미한 피드백을 생산적으로 주고받으며 공동의 의미를 형성해 나가는 능력입니다."]] },
+    { no: "02", name: "정보처리 기능", c: "#2f6fd6",
+      d: "다양한 매체에서 목적에 맞는 자료를 탐색·선별한 후, 신뢰도를 판단하여 유의미하게 재구조화하고 윤리적으로 활용하는 능력",
+      teach: "교사는 학생들이 자료의 신뢰성과 타당성을 검토하도록 지도하고, 정보의 윤리적 활용 능력과 데이터 기반 사고를 동시에 기를 수 있도록 지원합니다.",
+      subs: [
+        ["정보", "정보 활용", "해결해야 할 학습 과제와 목적에 맞게 스스로 조사 계획을 체계적으로 세우고, 다양한 온·오프라인 자원으로부터 신뢰할 수 있는 자료를 능동적으로 탐색·수집하여 데이터화하는 능력입니다."],
+        ["매체", "매체 활용", "수집한 정보의 타당성과 신뢰성을 비판적으로 평가하여 핵심 내용을 분류하고, 복잡한 지식과 데이터를 목적과 맥락에 맞게 재구성하거나 다양한 디지털·아날로그 매체로 시각화·구조화하는 능력입니다."],
+        ["윤리", "윤리적 활용", "타인의 지식 재산권을 존중하고 보호하며, 인용과 출처를 올바른 방식으로 표기하고 디지털 미디어 및 정보 기술 환경 속에서 책임감 있고 안전하게 활용하는 능력입니다."]] },
+    { no: "03", name: "사고 기능", c: "#7a4fd1",
+      d: "지식을 비판적·창의적으로 융합하여 새로운 가치를 창출하고 주도적으로 문제를 해결하는 고등 인지적 탐구 능력",
+      teach: "교사는 학생이 스스로 사고의 흐름을 점검하고 생각을 정교화할 수 있도록 질문, 토의, 시각화 등의 전략을 활용하여 사고의 확장을 적극적으로 지원합니다.",
+      subs: [
+        ["비판", "비판적 사고", "사실과 의견을 명확히 구분하고, 주장이나 자료 뒤에 숨겨진 논리적 오류나 편견을 찾아내며, 객관적인 근거를 바탕으로 현상의 인과 관계를 입증하고 심층 검증하는 능력입니다."],
+        ["창의", "창의적 사고", "고정 관념이나 기존의 틀에서 벗어나 다양하고 독창적인 아이디어를 자유롭게 생성하고, 서로 다른 맥락과 지식을 유기적으로 연결하여 새로운 관점이나 혁신적인 대안을 도출하는 능력입니다."],
+        ["전이", "전이와 융합", "여러 교과나 영역에서 배운 다양한 지식과 학습 전략을 서로 유기적으로 결합하고, 이를 복잡하고 새로운 실제 삶의 맥락에 적극적으로 적용하여 종합적인 해결책을 도출하는 능력입니다."]] },
+    { no: "04", name: "자기관리 기능", c: "#2fa36b",
+      d: "스스로 목표를 설정하고 시간과 정서를 조절하며, 메타 인지적 성찰을 통해 주도적으로 성장하는 능력",
+      teach: "교사는 정서 지원, 마음 교육, 학습 포트폴리오, 자기 평가, 목표 설정 활동 등을 활용하여 학생이 주도적으로 학습을 관리하고 회복 탄력성을 기를 수 있도록 지원합니다.",
+      subs: [
+        ["조직", "조직화", "스스로 도전적인 학습 목표를 설정하고, 우선 순위에 따라 유한한 시간과 학습 자원을 효율적으로 배치하며, 외부 유혹에 흔들리지 않고 자신의 학습 경로를 구조화하여 주도적으로 통제하는 능력입니다."],
+        ["정서", "사회 정서", "학업 과정에서 발생하는 불안, 스트레스, 지루함, 충동(게임, SNS 등)이나 실패 경험을 스스로 알아차리고, 회복 탄력성과 긍정적 사고를 통해 감정을 다스리며 집중력을 유지하는 능력입니다."],
+        ["성찰", "성찰", "자신의 학습 과정과 평가 결과를 객관적으로 되돌아보며 잘한 점과 부족한 점을 파악하고, 공부 방식의 문제점을 검토·수정하여 이를 자신의 삶과 진로에 의미 있게 연결하는 능력입니다."]] },
+    { no: "05", name: "공동체 기능", c: "#c98a00",
+      d: "교실 수업을 통해 다져진 지식과 생각하는 힘을 바탕으로, 학교 밖 더 넓은 세상 속에서 타인과 연대하고 사회적 책무를 다하는 능력",
+      teach: "교사는 협동 학습, 지역 연계 프로젝트 등 공동체 기반의 수업을 설계하여 학생들이 민주적 의사 결정과 책임 있는 참여를 경험하도록 적극적으로 돕습니다.",
+      subs: [
+        ["관계", "대인 관계", "타인의 다양성과 개성을 있는 그대로 존중하고 배려하며, 모둠 활동이나 일상의 배움 과정에서 갈등 상황이 발생했을 때 이를 합리적으로 중재하여 건강하고 평화로운 관계를 유지하는 능력입니다."],
+        ["책임", "사회적 책임", "공동의 목표를 달성하기 위해 모둠 내에서 자신에게 주어진 역할과 책임을 끝까지 다하고, 학업 및 일상 공동체의 규칙과 규범을 준수하며 동료와 상호 의존적으로 협력하여 시너지를 내는 능력입니다."],
+        ["시민", "글로컬 시민성", "나에 대한 이해를 바탕으로 내가 살고 있는 지역 사회의 당면 과제부터 인류 보편의 지구촌 공동의 문제까지 깊이 있게 인식하고, 더 나은 사회적 가치를 위해 민주적인 의사 결정과 실제적인 문제 해결 행동에 주체적으로 참여하는 능력입니다."]] }
+  ];
+  /* 「대구학습법 학습 기능별 실천 지표」 고등학교 89개 */
+  const IND = [["고01경청-01", "타인의 다양한 관점과 생각을 비판적으로 수용한다."],
+    ["고01경청-02", "비언어적 신호(표정, 행동)를 읽어내어 의도를 파악한다."],
+    ["고01경청-03", "타인의 기쁨, 슬픔, 고통에 대해 깊이 있게 공감한다."],
+    ["고01경청-04", "문학, 예술 등 다양한 문화적 가치를 감상한다."],
+    ["고01표현-01", "다양한 말하기 기법을 사용하여 다양한 대상과 소통한다."],
+    ["고01표현-02", "적절한 형식을 사용하여 생각을 글로 표현한다."],
+    ["고01표현-03", "청중, 목적, 맥락에 적합한 표현 방식과 어조를 선택한다."],
+    ["고01표현-04", "생각이나 주제를 의사소통 맥락에 맞게 다양한 매체로 전달한다."],
+    ["고01표현-05", "명확한 증거와 자료를 바탕으로 말이나 글로 설명한다."],
+    ["고01표현-06", "교과에서 사용하는 핵심 용어와 기호를 맥락에 맞게 사용한다."],
+    ["고01표현-07", "서론 본론 결론의 논리적 완결성을 갖추어 글을 쓴다."],
+    ["고01표현-08", "해당 학문 분야의 전문 용어와 개념을 정확하게 사용한다."],
+    ["고01협력-01", "타인과 상호 작용하여 공동의 의미를 형성한다."],
+    ["고01협력-02", "동료의 의견에 대해 유의미한 피드백을 주고 받는다."],
+    ["고02정보-01", "다양한 정보원(책, 기사, 영상, 웹 자료 등)을 적절히 활용하여 정보를 탐색한다."],
+    ["고02정보-02", "목적, 질문, 주제에 맞게 정보를 수집하고 분석한다."],
+    ["고02정보-03", "수집한 정보들 사이의 관계(인과, 상관, 대립 등)를 파악한다."],
+    ["고02정보-04", "사용하는 정보의 신뢰성을 확인한다."],
+    ["고02정보-05", "다양한 방법을 활용하여 자료를 분석하고 해석한다."],
+    ["고02정보-06", "분석한 자료를 논리적 구조로 체계화한다."],
+    ["고02정보-07", "데이터나 통계 자료를 목적에 맞게 시각화(그래프, 도표 등)하거나 해석한다."],
+    ["고02정보-08", "데이터나 통계자료에서 결론 및 시사점을 도출한다."],
+    ["고02정보-09", "계획과 분석 결과, 결론을 활용하여 보고서를 작성한다."],
+    ["고02매체-01", "전달하고자 하는 메시지와 청중의 특성에 가장 부합하는 매체와 형식을 선택한다."],
+    ["고02매체-02", "디지털 도구와 기술을 활용하여 자신의 아이디어를 창의적인 콘텐츠로 생산하고 공유한다."],
+    ["고02매체-03", "매체에 담긴 메시지의 정보 전달 방식과 의도를 비판적으로 해석한다."],
+    ["고02매체-04", "매체에 담긴 메시지가 대중에게 미치는 영향을 평가한다."],
+    ["고02매체-05", "AI를 적절하게 활용하여 정보를 탐색한다."],
+    ["고02윤리-01", "사용하는 자료의 출처를 밝힌다."],
+    ["고02윤리-02", "저작권과 인용 규칙(AI 인용 등)을 준수한다."],
+    ["고02윤리-03", "다양한 소스 및 매체에서 정보를 찾고, 윤리적으로 사용한다."],
+    ["고02윤리-04", "온라인 공간에서 타인의 인격, 사생활, 개인정보를 보호한다."],
+    ["고02윤리-05", "가짜 뉴스, 혐오 표현, 사이버 폭력의 문제점을 인식하고 비판적으로 판단한다."],
+    ["고03비판-01", "주의 깊게 관찰하여 문제의 맥락과 원인을 비판적으로 분석한다."],
+    ["고03비판-02", "다양한 관점에서 아이디어를 비교 및 분석하고 타당성을 판단한다."],
+    ["고03비판-03", "서로 다른 입장의 근거, 강점과 한계를 논리적으로 평가한다."],
+    ["고03비판-04", "현상이나 문제의 원인을 다각도로 검토한다."],
+    ["고03비판-05", "표면적인 현상과 근본 원인을 구분하고 그 관계를 파악한다."],
+    ["고03비판-06", "현상의 추세와 원인을 종합적으로 분석하여 향후 가능성과 영향을 추론한다."],
+    ["고03비판-07", "다양한 자료의 타당성과 근거를 비판적으로 검토하여 논리적 결론을 도출한다."],
+    ["고03비판-08", "증거 및 주장, 이끌어낸 결론 간의 논리성을 고려하여 타당성을 종합적으로 평가한다."],
+    ["고03창의-01", "기존의 해결 방식에 의문을 제기한다."],
+    ["고03창의-02", "기존 가설을 확장하거나 변형하여 새로운 가능성을 탐색한다."],
+    ["고03창의-03", "여러 가지 아이디어를 재구성하여 새로운 개념이나 체계를 만든다."],
+    ["고03창의-04", "기존 관점의 한계를 발견하고 새로운 관점으로 재해석한다."],
+    ["고03창의-05", "기존의 여러 아이디어의 장단점을 비교하여 새로운 해결 방향을 만든다."],
+    ["고03창의-06", "문제 상황을 새롭게 해석하고 해결 아이디어를 구체적인 대안으로 발전시킨다."],
+    ["고03창의-07", "확산적 사고와 수렴적 사고를 사용하여 해결책을 도출한다."],
+    ["고03전이-01", "서로 다른 교과의 지식과 방법론을 융합하여 복합적인 문제의 해결책을 도출한다."],
+    ["고03전이-02", "교실에서 배운 이론적 지식을 실생활의 문제 상황이나 지역 사회의 이슈에 적용하여 실제적인 변화를 만든다."],
+    ["고03전이-03", "복잡한 프로젝트를 수행할 때 전체 시스템의 흐름을 파악한다."],
+    ["고03전이-04", "복잡한 프로젝트에서 예측가능한 변수와 위험 요소를 사전에 관리한다."],
+    ["고03전이-05", "서로 다른 맥락과 경험을 융합하여 새로운 관점과 해석을 만든다."],
+    ["고04조직-01", "도전적이며 실현가능한 생활과 학업 목표를 수립한다."],
+    ["고04조직-02", "과제(프로젝트 등)를 계획하고 제출기한과 약속을 준수한다."],
+    ["고04조직-03", "조직적이고 논리적 방법으로 학습자료를 정리한다."],
+    ["고04조직-04", "계획과 전략에 따라 과제를 끝까지 수행한다."],
+    ["고04조직-05", "복잡한 정보를 조직하기 위해 적절한 전략을 사용한다."],
+    ["고04조직-06", "해야 할 일의 우선 순위에 따라 시간을 배분한다."],
+    ["고04조직-07", "자신에게 최적화된 학습 습관을 만들고 유지한다."],
+    ["고04정서-01", "공부와 생활에 인내와 끈기를 가진다."],
+    ["고04정서-02", "시험 불안, 학업 스트레스 등이 생길 때 알아차린다."],
+    ["고04정서-03", "스트레스와 불안을 줄이는 전략을 연습한다."],
+    ["고04정서-04", "충동과 분노를 극복하는 습관을 익힌다."],
+    ["고04정서-05", "충동적인 욕구(게임, SNS 등)를 인식하고 스스로 조절한다."],
+    ["고04정서-06", "실수나 실패 후 회복력을 발휘하는 연습을 한다."],
+    ["고04정서-07", "방해요소를 차단하고 해야 할 일에 초점을 유지하며 집중한다."],
+    ["고04정서-08", "긍정적 사고를 연습한다."],
+    ["고04성찰-01", "학습의 과정을 돌아보며 잘한 점과 어려웠던 점을 구분하여 인식한다."],
+    ["고04성찰-02", "평가 결과나 피드백을 분석하여 강점과 약점을 파악한다."],
+    ["고04성찰-03", "공부하는 방식을 검토하여 더 나은 방식을 선택한다."],
+    ["고04성찰-04", "배운 내용이 나의 삶, 가치관, 그리고 미래 진로에 어떤 의미를 갖는지 되돌아본다."],
+    ["고04성찰-05", "성찰을 기록하기 위한 저널(일지)을 작성한다."],
+    ["고05관계-01", "타인의 감정과 다양한 의견을 존중한다."],
+    ["고05관계-02", "갈등 발생 시 원인을 이해관계와 가치관의 차이 관점에서 분석한다."],
+    ["고05관계-03", "공동의 목표를 위해 서로 소통하며 협력한다."],
+    ["고05관계-04", "팀에서 맡은 역할을 책임감 있게 수행한다."],
+    ["고05관계-05", "민주적인 절차와 토론을 통해 양측이 모두 수용할 수 있는 합리적인 타협안을 도출한다."],
+    ["고05관계-06", "타인의 성장과 성공을 돕는 마음을 가진다."],
+    ["고05관계-07", "공동의 목표 달성을 위해 구성원 각자의 강점과 특성을 고려하여 역할을 합리적으로 배분한다."],
+    ["고05책임-01", "약속과 규칙을 지키며 자신의 행동을 책임진다."],
+    ["고05책임-02", "자신의 행동이 공동체에 미치는 영향을 고려한다."],
+    ["고05시민-01", "자아 탐색을 통해 국가와 세계 공동체의 구성원으로서 나의 역할을 인식하고, 시민으로서의 정체성을 확립한다."],
+    ["고05시민-02", "학교와 지역사회 문제에 관심을 가진다."],
+    ["고05시민-03", "기후 위기, 빈곤, 인권, 문화 다양성 등 글로벌 문제의 구조적 원인을 탐구한다."],
+    ["고05시민-04", "글로벌 문제 해결을 위해 지역·국가·세계 차원의 실천을 주도적으로 기획하고 참여한다."],
+    ["고05시민-05", "자신의 소비와 생활 방식이 환경과 미래 세대에 미치는 영향을 비판적으로 성찰한다."],
+    ["고05시민-06", "공정성과 지속가능성의 관점에서 소비를 실천한다."],
+    ["고05시민-07", "지역과 세계의 문제를 연결하여 사회 변화를 위한 협력적 행동에 참여한다."]];
+
+  const $ = id => document.getElementById(id);
+  const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  const skillOf = code => SKILLS[+code.slice(1, 3) - 1];
+  const subOf = code => code.replace(/^고\d\d/, "").replace(/-\d\d$/, "");
+  const KEY = "daegu-hs-indicators.v1";
+  let done = new Set();
+  try { done = new Set(JSON.parse(localStorage.getItem(KEY)) || []); } catch (e) {}
+  const save = () => { try { localStorage.setItem(KEY, JSON.stringify([...done])); } catch (e) {} };
+  const state = { skill: "", sub: "", q: "", only: false };
+  function toast(m) { const t = document.createElement("div"); t.className = "toast"; t.textContent = m; t.setAttribute("role", "status"); document.body.appendChild(t); setTimeout(() => t.remove(), 1800); }
+
+  /* 5개 학습 기능 카드 */
+  function renderSkills() {
+    $("skills").innerHTML = SKILLS.map(s => {
+      const n = IND.filter(([c]) => skillOf(c) === s).length;
+      return `<button type="button" class="skill${state.skill === s.no ? " on" : ""}" data-no="${s.no}" style="--c:${s.c}">
+        <span class="no">${s.no} · 실천 지표 ${n}개</span><span class="t">${s.name}</span><span class="d">${esc(s.d)}</span>
+        <span class="subs">${s.subs.map(x => `<span class="tag">${x[1]}</span>`).join("")}</span></button>`;
+    }).join("");
+    document.querySelectorAll(".skill").forEach(b => b.onclick = () => {
+      state.skill = state.skill === b.dataset.no ? "" : b.dataset.no; state.sub = ""; render();
+      if (state.skill) document.getElementById("indicators").scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  }
+
+  /* 필터 */
+  function renderFilters() {
+    const chip = (on, label, n, attr) => `<button type="button" class="chip${on ? " on" : ""}" ${attr}>${label}<span class="n">${n}</span></button>`;
+    $("fSkill").innerHTML = chip(!state.skill, "전체 기능", IND.length, 'data-s=""') +
+      SKILLS.map(s => chip(state.skill === s.no, s.name, IND.filter(([c]) => skillOf(c) === s).length, `data-s="${s.no}"`)).join("");
+    const sk = SKILLS.find(s => s.no === state.skill);
+    $("fSub").innerHTML = sk ? chip(!state.sub, "세부 기능 전체", IND.filter(([c]) => skillOf(c) === sk).length, 'data-b=""') +
+      sk.subs.map(x => chip(state.sub === x[0], x[1], IND.filter(([c]) => skillOf(c) === sk && subOf(c) === x[0]).length, `data-b="${x[0]}"`)).join("") : "";
+    if (sk) $("fSub").innerHTML += `<div class="src" style="flex-basis:100%;margin-top:2px"><b>교사의 지원</b> ${esc(sk.teach)}</div>`;
+    $("fSub").style.display = sk ? "" : "none";
+    document.querySelectorAll("#fSkill .chip").forEach(b => b.onclick = () => { state.skill = b.dataset.s; state.sub = ""; render(); });
+    document.querySelectorAll("#fSub .chip").forEach(b => b.onclick = () => { state.sub = b.dataset.b; render(); });
+  }
+
+  /* 실천 지표 목록 */
+  function renderList() {
+    const q = state.q.trim();
+    const items = IND.filter(([c, t]) =>
+      (!state.skill || c.slice(1, 3) === state.skill) && (!state.sub || subOf(c) === state.sub) &&
+      (!q || t.includes(q) || c.includes(q)) && (!state.only || !done.has(c)));
+    $("cnt").textContent = `${items.length}개`;
+    let html = "";
+    SKILLS.forEach(s => s.subs.forEach(([k, name, desc]) => {
+      const g = items.filter(([c]) => skillOf(c) === s && subOf(c) === k);
+      if (!g.length) return;
+      html += `<div class="grp" style="--c:${s.c}"><div class="grp-h"><span class="code">${s.no}${k}</span><b>${name}</b><span class="src">${s.name}</span></div>
+        <div class="grp-d">${esc(desc)}</div>` +
+        g.map(([c, t]) => `<label class="ind${done.has(c) ? " done" : ""}" style="--c:${s.c}"><input type="checkbox" data-c="${c}"${done.has(c) ? " checked" : ""} aria-label="${c} 실천함"><span class="code">${c}</span><span class="txt">${esc(t)}</span></label>`).join("") + `</div>`;
+    }));
+    $("list").innerHTML = html || `<div class="empty">조건에 맞는 실천 지표가 없습니다.</div>`;
+    document.querySelectorAll("#list input[data-c]").forEach(i => i.onchange = () => {
+      i.checked ? done.add(i.dataset.c) : done.delete(i.dataset.c); save();
+      i.closest(".ind").classList.toggle("done", i.checked); renderStats();
+      if (state.only && i.checked) setTimeout(renderList, 250);
+    });
+  }
+
+  /* 나의 실천 점검 */
+  function renderStats() {
+    $("meters").innerHTML = SKILLS.map(s => {
+      const all = IND.filter(([c]) => skillOf(c) === s), n = all.filter(([c]) => done.has(c)).length;
+      return `<div class="meter" style="--c:${s.c}"><span>${s.name.replace(" 기능", "")}</span><span class="tr"><span class="fl" style="width:${n / all.length * 100}%;display:block"></span></span><span class="v">${n}/${all.length}</span></div>`;
+    }).join("");
+    $("mDone").textContent = `${done.size} / ${IND.length}`;
+    $("stateBadge").textContent = `실천 ${done.size} / ${IND.length}`;
+    const rate = s => { const all = IND.filter(([c]) => skillOf(c) === s); return all.filter(([c]) => done.has(c)).length / all.length; };
+    const sorted = SKILLS.slice().sort((a, b) => rate(b) - rate(a));
+    $("mBest").textContent = done.size ? sorted[0].name : "—";
+    if (!done.size) { $("tip").innerHTML = "<b>다음 목표</b> 지표에 체크하면 아직 덜 실천한 기능을 알려 드립니다."; return; }
+    const low = sorted[sorted.length - 1];
+    $("tip").innerHTML = `<b>다음 목표</b> 가장 덜 실천한 기능은 <b>${low.name}</b>입니다. 세부 기능 ${low.subs.map(x => x[1]).join(" · ")}의 지표 중 하나를 골라 다음 수업에서 실천해 보세요.`;
+  }
+
+  function render() { renderSkills(); renderFilters(); renderList(); renderStats(); }
+
+  $("q").addEventListener("input", e => { state.q = e.target.value; renderList(); });
+  $("onlyBtn").addEventListener("click", () => { state.only = !state.only; $("onlyBtn").textContent = state.only ? "모든 지표 보기" : "아직 안 한 지표만 보기"; renderList(); });
+  $("clearBtn").addEventListener("click", () => { if (!done.size) return; if (!confirm("체크한 실천 지표를 모두 지울까요?")) return; done.clear(); save(); render(); });
+  $("copyBtn").addEventListener("click", () => {
+    if (!done.size) { toast("먼저 실천한 지표에 체크하세요"); return; }
+    const lines = ["[대구학습법 고등학교 실천 지표 · 나의 실천 점검]", `실천한 지표 ${done.size} / ${IND.length}`, ""];
+    SKILLS.forEach(s => {
+      const g = IND.filter(([c]) => skillOf(c) === s && done.has(c));
+      if (!g.length) return;
+      lines.push(`■ ${s.name} (${g.length}개)`); g.forEach(([c, t]) => lines.push(`  (${c}) ${t}`)); lines.push("");
+    });
+    const txt = lines.join("\n");
+    const fallback = () => { const ta = document.createElement("textarea"); ta.value = txt; ta.style.cssText = "position:fixed;opacity:0"; document.body.appendChild(ta); ta.select(); let ok = false; try { ok = document.execCommand("copy"); } catch (e) {} ta.remove(); toast(ok ? "복사했어요" : "복사하지 못했어요"); };
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(txt).then(() => toast("체크한 지표를 복사했어요"), fallback); else fallback();
+  });
+  render();
+</script>
+</body>
+</html>
